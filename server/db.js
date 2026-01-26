@@ -194,7 +194,7 @@ function getAllCashouts() {
 }
 
 function getCashoutsByUser(userId) {
-  return db.prepare('SELECT * FROM cashouts WHERE userId = ? ORDER BY requested_at DESC').all();
+  return db.prepare('SELECT * FROM cashouts WHERE userId = ? ORDER BY requested_at DESC').all(userId);
 }
 
 function updateCashoutStatus(id, status, reason) {
