@@ -27,10 +27,15 @@ export async function showDashboard(data) {
               <h1>Welcome, Henpreneur!</h1>
             </div>
           </div>
-          <button class="logout-pill" onclick="handleLogout()">
-            <span>Logout</span>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-          </button>
+          <div style="display:flex; gap:10px; align-items:center;">
+             <button class="logout-pill" onclick="toggleMute()" id="mute-btn" style="padding: 8px 12px;">
+                <span id="mute-icon">🔊</span>
+             </button>
+             <button class="logout-pill" onclick="handleLogout()">
+               <span>Logout</span>
+               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+             </button>
+          </div>
         </div>
       </header>
 
@@ -49,13 +54,17 @@ export async function showDashboard(data) {
               <span class="stat-label">Eggs</span>
               <span class="stat-value" id="egg-count">${data.eggs || 0}</span>
             </div>
+            <button class="btn-sm" onclick="sellEggsUI()" style="margin-left:auto;">Sell</button>
           </div>
-          <div class="stat-card balance">
+          
+          <div class="stat-card balance" onclick="openProfileModal()">
+             <!-- Profile / Balance Card -->
             <div class="stat-icon">💰</div>
             <div class="stat-info">
               <span class="stat-label">Balance</span>
               <span class="stat-value" id="balance-count">₱${data.balance || 0}</span>
             </div>
+            <button class="btn-sm" style="margin-left:auto;">Profile</button>
           </div>
         </div>
         
@@ -88,32 +97,54 @@ export async function showDashboard(data) {
           </div>
           <div class="subscriptions-grid">
             <div class="subscription-card ${data.subscription === 'basic' ? 'active' : ''}">
-              <div class="subscription-tag">BASIC</div>
-              <div class="subscription-price">₱50</div>
-              <ul class="subscription-features">
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> No minimum cashout</li>
-              </ul>
-              ${data.subscription === 'basic' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" onclick="purchaseSubscription('basic', 50)">Activate Subscription</button>`}
+              <div class="sub-header" onclick="toggleSub(this)">
+                <div class="sub-header-top">
+                    <div class="subscription-tag">BASIC</div>
+                    <div class="toggle-icon">▼</div>
+                </div>
+                <div class="subscription-price">₱50</div>
+              </div>
+              <div class="sub-details">
+                <ul class="subscription-features">
+                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 4 daily bananas</li>
+                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> No minimum cashout</li>
+                </ul>
+                ${data.subscription === 'basic' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" onclick="purchaseSubscription('basic', 50)">Activate Subscription</button>`}
+              </div>
             </div>
             
             <div class="subscription-card featured ${data.subscription === 'premium' ? 'active' : ''}">
-              <div class="subscription-tag">PREMIUM</div>
-              <div class="subscription-price">₱100</div>
-              <ul class="subscription-features">
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 20 daily bananas</li>
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> No minimum cashout</li>
-              </ul>
-              ${data.subscription === 'premium' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" onclick="purchaseSubscription('premium', 100)">Activate Subscription</button>`}
+              <div class="sub-header" onclick="toggleSub(this)">
+                <div class="sub-header-top">
+                    <div class="subscription-tag">PREMIUM</div>
+                     <div class="toggle-icon">▼</div>
+                </div>
+                <div class="subscription-price">₱100</div>
+              </div>
+              <div class="sub-details">
+                  <ul class="subscription-features">
+                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 20 daily bananas</li>
+                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> No minimum cashout</li>
+                  </ul>
+                  ${data.subscription === 'premium' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" onclick="purchaseSubscription('premium', 100)">Activate Subscription</button>`}
+              </div>
             </div>
             
             <div class="subscription-card ${data.subscription === 'vip' ? 'active' : ''}">
-              <div class="subscription-tag">VIP</div>
-              <div class="subscription-price">₱200</div>
-              <ul class="subscription-features">
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 50 daily bananas</li>
-                <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> No minimum cashout</li>
-              </ul>
-              ${data.subscription === 'vip' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" onclick="purchaseSubscription('vip', 200)">Activate Subscription</button>`}
+              <div class="sub-header" onclick="toggleSub(this)">
+                <div class="sub-header-top">
+                    <div class="subscription-tag">VIP</div>
+                     <div class="toggle-icon">▼</div>
+                </div>
+                <div class="subscription-price">₱200</div>
+              </div>
+              <div class="sub-details">
+                  <ul class="subscription-features">
+                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 50 daily bananas</li>
+                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> No minimum cashout</li>
+                  </ul>
+                  ${data.subscription === 'vip' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" onclick="purchaseSubscription('vip', 200)">Activate Subscription</button>`}
+              </div>
             </div>
           </div>
         </div>
@@ -127,10 +158,13 @@ export async function showDashboard(data) {
           </div>
           <div class="referral-container">
             <div class="referral-input-group">
-              <input type="text" id="referral-link" readonly value="${window.location.origin}/?ref=${data.referral_code}">
-              <button class="btn-copy" onclick="copyUserReferralLink()">
-                <span id="copy-text">Copy Link</span>
-              </button>
+              ${data.kyc_status === 'approved'
+      ? `<input type="text" id="referral-link" readonly value="${window.location.origin}/?ref=${data.referral_code}">
+                   <button class="btn-copy" onclick="copyUserReferralLink()">
+                     <span id="copy-text">Copy Link</span>
+                   </button>`
+      : `<div class="alert alert-warning" style="width:100%; font-size:13px;">⚠️ Complete KYC Verification to unlock referrals! <a onclick="window.triggerKYCVerify(event)" style="cursor:pointer; text-decoration:underline;">Verify Now</a></div>`
+    }
             </div>
           </div>
         </div>
@@ -146,23 +180,34 @@ export async function showDashboard(data) {
                 <span>₱</span>
                 <input type="number" id="cashout-amount" placeholder="0.00" min="1" step="0.01">
               </div>
-              <button class="btn-cashout" onclick="requestCashout()">Request Withdrawal</button>
+              <button class="btn-cashout" onclick="requestCashout()">Withdraw</button>
             </div>
+            <p style="font-size:12px; color:var(--gray); margin-top:8px;">
+              Will be sent to: <strong>${data.payment_method || 'Not Set'} (${data.payment_number || '---'})</strong>
+              <a onclick="openProfileModal()" style="color:var(--primary); cursor:pointer;">Edit</a>
+            </p>
             <div id="cashout-message"></div>
-            
-            <div class="history-container">
-              <h3>Recent Withdrawals</h3>
+          </div>
+        </div>
+        
+        <div class="card history-section" style="margin-top: 20px; padding: 16px;">
+          <div class="card-header clickable" onclick="toggleHistory(this)" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 0;">
+             <span class="card-title" style="font-size: 1.1rem; margin:0;">📜 Withdrawal History</span>
+             <span class="toggle-icon" style="transition: transform 0.3s;">▼</span>
+          </div>
+          <div id="cashout-history-container" style="display:none; margin-top:16px; border-top: 1px solid #eee; padding-top: 16px;">
               <div id="cashout-history-list" class="history-list">
                 <div class="skeleton-loader"></div>
               </div>
+          </div>
         </div>
       </main>
 
       <footer class="dashboard-footer">
         <div class="footer-content">
           <div class="footer-brand">
-            <span class="footer-logo">Chicken Banana 🐔🍌</span>
-            <p>The funniest way to earn GCash!</p>
+            <span class="footer-logo">Chicken Banana</span>
+            <p>The funniest way to earn</p>
           </div>
           <div class="footer-links">
             <a href="#">Privacy Policy</a>
@@ -210,6 +255,214 @@ async function checkSubscriptionRequests() {
   } catch (e) { console.log('Req check fail', e) }
 }
 
+window.showKYCPage = async function (user) {
+  const { showKYCPage } = await import('./auth.js')
+  showKYCPage(user)
+}
+
+window.triggerKYCVerify = function (e) {
+  if (e) e.stopPropagation();
+  window.showKYCPage(userData)
+}
+
+window.toggleSub = function (el) {
+  // Only toggle on mobile checks (screen width < 768 or simplistic check)
+  // Actually, user wants "on mobile", so we simply toggle class 'expanded' on the card
+  const card = el.closest('.subscription-card')
+  card.classList.toggle('expanded')
+}
+
+// PROFILE MODAL
+window.openProfileModal = function () {
+  const u = userData
+  const modal = document.createElement('div')
+  modal.className = 'modal-overlay active'
+  modal.innerHTML = `
+      <div class="modal-card">
+        <div class="modal-header">
+           <h2>User Profile</h2>
+           <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <h3>Payment Details</h3>
+            <p style="font-size:12px; color:#666; margin-bottom:10px;">Used for receiving withdrawals.</p>
+            <form id="profile-form" onsubmit="updateProfile(event)">
+                <div class="form-group">
+                   <label>Mode of Payment</label>
+                   <select id="p-method" required>
+                      <option value="">Select Method</option>
+                      <option value="GCash" ${u.payment_method === 'GCash' ? 'selected' : ''}>GCash</option>
+                      <option value="Maya" ${u.payment_method === 'Maya' ? 'selected' : ''}>Maya</option>
+                      <option value="GoTyme" ${u.payment_method === 'GoTyme' ? 'selected' : ''}>GoTyme</option>
+                   </select>
+                </div>
+                <div class="form-group">
+                   <label>Account Name</label>
+                   <input type="text" id="p-name" value="${u.payment_name || ''}" placeholder="Full Name" required>
+                </div>
+                <div class="form-group">
+                   <label>Account Number</label>
+                   <input type="text" id="p-number" value="${u.payment_number || ''}" placeholder="09XX..." required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%">Save Changes</button>
+            </form>
+        </div>
+      </div>
+    `
+  document.body.appendChild(modal)
+}
+
+window.updateProfile = async function (e) {
+  e.preventDefault()
+  const method = document.getElementById('p-method').value
+  const name = document.getElementById('p-name').value
+  const number = document.getElementById('p-number').value
+  const btn = e.target.querySelector('button[type="submit"]')
+
+  // Validate
+  if (!method || !name || !number) {
+    alert('Please fill in all fields')
+    return
+  }
+
+  try {
+    if (btn) btn.disabled = true;
+    if (btn) btn.textContent = 'Saving...';
+
+    const resp = await fetch(`/api/users/${userData.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        payment_method: method,
+        payment_name: name,
+        payment_number: number
+      })
+    })
+    if (resp.ok) {
+      const { user } = await resp.json()
+      userData = user // update local
+      // Update local storage too just in case
+      try {
+        const stored = JSON.parse(localStorage.getItem('local_current_user') || '{}')
+        if (stored.id === user.id) {
+          localStorage.setItem('local_current_user', JSON.stringify({ ...stored, ...user })) // This might be overkill but safe
+        }
+      } catch (e) { }
+
+      alert('Profile updated successfully! ✅')
+      document.querySelector('.modal-overlay').remove()
+      showDashboard(userData) // refresh UI
+    } else {
+      const err = await resp.json()
+      alert('Failed to update: ' + (err.error || 'Unknown error'))
+      if (btn) btn.disabled = false;
+      if (btn) btn.textContent = 'Save Changes';
+    }
+  } catch (err) {
+    console.error(err)
+    alert('Error: ' + err.message)
+    if (btn) btn.disabled = false;
+    if (btn) btn.textContent = 'Save Changes';
+  }
+}
+
+// SELL EGGS UI
+window.sellEggsUI = function () {
+  const eggs = userData.eggs || 0
+  if (eggs < 1) {
+    alert('You have no eggs to sell!')
+    return
+  }
+
+  // Create modal
+  const modal = document.createElement('div')
+  modal.className = 'modal-overlay active'
+  modal.innerHTML = `
+    <div class="modal-card" style="max-width: 400px;">
+      <div class="modal-header">
+        <h2 style="color: var(--primary-green); margin: 0;">🥚 Sell Eggs</h2>
+        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 16px; color: var(--gray);">You have <strong>${eggs} eggs</strong>. Each egg sells for <strong>₱1</strong>.</p>
+        <div class="form-group">
+          <label>How many eggs do you want to sell?</label>
+          <input type="number" id="sell-egg-amount" min="1" max="${eggs}" value="${eggs}" 
+                 style="width: 100%; padding: 12px; border: 2px solid var(--light-gray); border-radius: 8px; font-size: 1rem;">
+        </div>
+        <div style="background: var(--light-green); padding: 12px; border-radius: 8px; margin-top: 12px;">
+          <p style="margin: 0; font-size: 0.9rem; color: var(--dark-green);">
+            💰 You will receive: <strong id="sell-preview">₱${eggs}</strong>
+          </p>
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; gap: 12px; justify-content: flex-end;">
+        <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()" 
+                style="padding: 10px 20px; background: var(--light-gray); border: none; border-radius: 8px; cursor: pointer;">
+          Cancel
+        </button>
+        <button class="btn-primary" onclick="confirmSellEggs()" 
+                style="padding: 10px 20px; background: var(--primary-green); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+          Sell Eggs
+        </button>
+      </div>
+    </div>
+  `
+  document.body.appendChild(modal)
+
+  // Update preview on input change
+  const input = document.getElementById('sell-egg-amount')
+  const preview = document.getElementById('sell-preview')
+  input.addEventListener('input', () => {
+    const val = parseInt(input.value) || 0
+    preview.textContent = `₱${val}`
+  })
+}
+
+window.confirmSellEggs = async function () {
+  const amount = parseInt(document.getElementById('sell-egg-amount').value)
+  if (!amount || amount < 1) {
+    alert('Please enter a valid amount')
+    return
+  }
+
+  const btn = document.querySelector('.modal-card .btn-primary')
+  if (btn) {
+    btn.disabled = true
+    btn.textContent = 'Selling...'
+  }
+
+  try {
+    const resp = await fetch('/api/sell-eggs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: userData.id, amount: amount })
+    })
+
+    const data = await resp.json()
+    if (data.error) throw new Error(data.error)
+
+    userData = data.user
+    document.querySelector('.modal-overlay').remove()
+
+    // Show success message with animation
+    alert(`✅ Successfully sold ${amount} eggs for ₱${amount}!`)
+    showDashboard(userData)
+    // Floating feedback for selling eggs
+    const balanceCard = document.querySelector('.stat-card.balance')
+    if (balanceCard) showFloatingNumber(balanceCard, `+₱${amount}`, 'positive')
+    const eggCard = document.querySelector('.stat-card.eggs')
+    if (eggCard) showFloatingNumber(eggCard, `-${amount} 🥚`, 'negative')
+
+  } catch (error) {
+    alert('Error: ' + error.message)
+    if (btn) {
+      btn.disabled = false
+      btn.textContent = 'Sell Eggs'
+    }
+  }
+}
+
 function updateBananaDisplay() {
   const bananaCount = userData.bananas || 0
   const feedBtn = document.getElementById('feed-btn')
@@ -232,8 +485,8 @@ window.feedChicken = async function () {
   feedBtn.disabled = true
   statusDiv.textContent = 'Feeding chicken...'
 
-  // Feeding animation
   chicken.classList.add('eating')
+  playSound('feed') // Play eating/chicken sound
 
   // Wait for animation
   await new Promise(resolve => setTimeout(resolve, 1500))
@@ -241,6 +494,7 @@ window.feedChicken = async function () {
   // Egg laying animation
   chicken.classList.remove('eating')
   chicken.classList.add('laying')
+  playSound('lay') // Play lay sound
 
   const egg = document.createElement('div')
   egg.className = 'egg-animation'
@@ -270,22 +524,22 @@ window.feedChicken = async function () {
     const { user } = await resp.json()
     userData = user // Update local state with server state
 
-    // Balance update animation
-    const balanceCard = document.querySelector('#balance-count').closest('.stat-card')
-    const balanceRect = balanceCard.getBoundingClientRect()
-    const eggRect = chicken.getBoundingClientRect()
+    // Egg update animation - fly to EGG card, not balance
+    const eggCard = document.querySelector('#egg-count').closest('.stat-card')
+    const eggCardRect = eggCard.getBoundingClientRect()
+    const chickenRect = chicken.getBoundingClientRect()
 
-    const balanceIcon = document.createElement('div')
-    balanceIcon.className = 'balance-update'
-    balanceIcon.textContent = '🥚'
-    balanceIcon.style.left = eggRect.left + 'px'
-    balanceIcon.style.top = eggRect.top + 'px'
-    balanceIcon.style.setProperty('--balance-x', `${balanceRect.left - eggRect.left}px`)
-    balanceIcon.style.setProperty('--balance-y', `${balanceRect.top - eggRect.top}px`)
-    document.body.appendChild(balanceIcon)
+    const eggIcon = document.createElement('div')
+    eggIcon.className = 'balance-update'
+    eggIcon.textContent = '🥚'
+    eggIcon.style.left = chickenRect.left + 'px'
+    eggIcon.style.top = chickenRect.top + 'px'
+    eggIcon.style.setProperty('--balance-x', `${eggCardRect.left - chickenRect.left}px`)
+    eggIcon.style.setProperty('--balance-y', `${eggCardRect.top - chickenRect.top}px`)
+    document.body.appendChild(eggIcon)
 
     setTimeout(() => {
-      balanceIcon.remove()
+      eggIcon.remove()
     }, 1500)
 
     // Update UI with a small delay for animation sync
@@ -294,12 +548,12 @@ window.feedChicken = async function () {
       document.getElementById('egg-count').textContent = userData.eggs
       document.getElementById('balance-count').textContent = `₱${userData.balance}`
 
-      const balanceValue = document.getElementById('balance-count')
-      balanceValue.classList.add('pulse-highlight')
-      setTimeout(() => balanceValue.classList.remove('pulse-highlight'), 500)
+      const eggValue = document.getElementById('egg-count')
+      eggValue.classList.add('pulse-highlight')
+      setTimeout(() => eggValue.classList.remove('pulse-highlight'), 500)
 
       chicken.classList.remove('laying')
-      statusDiv.textContent = 'Chicken laid an egg! +₱1 added to balance.'
+      statusDiv.textContent = 'Chicken laid an egg! Sell eggs to increase balance.'
       updateBananaDisplay()
     }, 1000)
 
@@ -317,6 +571,78 @@ window.feedChicken = async function () {
     alert(error.message)
     feedBtn.disabled = false
   }
+}
+
+// Interactive Helpers
+let isMuted = JSON.parse(localStorage.getItem('chicken_muted') || 'false')
+const sounds = {
+  feed: new Audio('/assets/sounds/chicken sound .mp3'),
+  lay: new Audio('/assets/sounds/lay eggs sound.mp3')
+}
+
+// Preload
+for (const key in sounds) {
+  sounds[key].load()
+  sounds[key].volume = 0.5
+}
+
+function playSound(type) {
+  if (isMuted) return
+  const sound = sounds[type]
+  if (sound) {
+    sound.currentTime = 0
+    sound.play().catch(e => console.log('Audio play failed', e))
+  }
+}
+
+window.toggleMute = function () {
+  isMuted = !isMuted
+  localStorage.setItem('chicken_muted', isMuted)
+  updateMuteIcon()
+}
+
+function updateMuteIcon() {
+  const btn = document.getElementById('mute-icon')
+  if (btn) btn.textContent = isMuted ? '🔇' : '🔊'
+}
+
+// Ensure icon is correct on load
+setTimeout(updateMuteIcon, 100)
+
+function showFloatingNumber(parentEl, text, type = 'positive') {
+  const floater = document.createElement('div')
+  floater.className = `floating-number ${type}`
+  floater.textContent = text
+
+  // Center relative to parent
+  const rect = parentEl.getBoundingClientRect()
+  floater.style.left = `${rect.left + rect.width / 2}px`
+  floater.style.top = `${rect.top}px`
+
+  document.body.appendChild(floater)
+
+  setTimeout(() => floater.remove(), 1000)
+}
+
+window.copyUserReferralLink = function () {
+  const link = document.getElementById('referral-link')
+  if (!link) return
+
+  link.select()
+  document.execCommand('copy')
+
+  const btn = document.querySelector('.btn-copy')
+  const originalHtml = btn.innerHTML
+  btn.innerHTML = '<span>Copied! ✅</span>'
+  btn.style.background = 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)'
+
+  // Show floating feedback too
+  showFloatingNumber(btn, 'Copied!', 'positive')
+
+  setTimeout(() => {
+    btn.innerHTML = originalHtml
+    btn.style.background = ''
+  }, 2000)
 }
 
 window.selectSubscription = function (plan, event) {
@@ -381,6 +707,14 @@ window.purchaseSubscription = async function (plan, price) {
         <input type="text" id="payment-ref" placeholder="Enter reference number" />
       </div>
 
+      <div class="form-group">
+        <label>Upload Receipt</label>
+        <div class="file-upload" onclick="document.getElementById('receipt-upload').click()" style="padding: 10px;">
+           <span id="receipt-label">Click to upload receipt image</span>
+           <input type="file" id="receipt-upload" accept="image/*" onchange="document.getElementById('receipt-label').textContent = this.files[0].name">
+        </div>
+      </div>
+
       <button class="btn btn-primary" onclick="submitSubscriptionRequest('${plan}', ${price})">Submit Request</button>
       <p style="font-size: 12px; color: var(--gray); margin-top: 15px; text-align: center;">Your subscription will be activated once an admin verifies the reference number.</p>
     </div>
@@ -391,23 +725,35 @@ window.purchaseSubscription = async function (plan, price) {
 window.submitSubscriptionRequest = async function (plan, price) {
   const method = document.getElementById('payment-method').value
   const refNumber = document.getElementById('payment-ref').value.trim()
+  const fileInput = document.getElementById('receipt-upload')
 
   if (!refNumber) {
     alert('Please enter your payment reference number')
     return
   }
 
+  const btn = document.querySelector('.btn-primary') // crude selector but works in modal context
+
   try {
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+    }
+
+    const formData = new FormData()
+    formData.append('userId', userData.id)
+    formData.append('plan', plan)
+    formData.append('price', price)
+    formData.append('method', method)
+    formData.append('refNumber', refNumber)
+
+    if (fileInput.files.length > 0) {
+      formData.append('receipt', fileInput.files[0])
+    }
+
     const resp = await fetch('/api/subscription-requests', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: userData.id,
-        plan,
-        price,
-        method,
-        refNumber
-      })
+      body: formData // No Content-Type header needed for FormData
     })
 
     if (!resp.ok) {
@@ -415,11 +761,16 @@ window.submitSubscriptionRequest = async function (plan, price) {
       throw new Error(err.error || 'Failed to submit request')
     }
 
-    alert('Request submitted! Please wait for admin approval.')
+    alert('Request submitted with receipt! Please wait for admin approval.')
     document.getElementById('payment-modal').remove()
     showDashboard(userData) // Refresh UI
   } catch (error) {
+    console.error(error)
     alert('Error: ' + error.message)
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Submit Request';
+    }
   }
 }
 
@@ -455,6 +806,29 @@ async function loadCashoutHistory() {
   }
 }
 
+window.toggleHistory = function (el) {
+  const container = document.getElementById('cashout-history-container');
+  const icon = el.querySelector('.toggle-icon');
+
+  const isExpanded = container.classList.contains('expanded');
+
+  if (isExpanded) {
+    // Collapse
+    container.classList.remove('expanded');
+    if (icon) icon.style.transform = 'rotate(0deg)';
+    setTimeout(() => {
+      container.style.display = 'none';
+    }, 400); // Match CSS transition duration
+  } else {
+    // Expand
+    container.style.display = 'block';
+    // Force reflow for animation
+    container.offsetHeight;
+    container.classList.add('expanded');
+    if (icon) icon.style.transform = 'rotate(180deg)';
+  }
+}
+
 window.requestCashout = async function () {
   const amountInput = document.getElementById('cashout-amount')
   const amount = parseFloat(amountInput.value)
@@ -470,52 +844,40 @@ window.requestCashout = async function () {
     return
   }
 
-  // Open Details Modal
+  // Check if payment details exist
+  if (!userData.payment_method || !userData.payment_number) {
+    alert('Please set your Payment Details in your Profile first!')
+    openProfileModal()
+    return
+  }
+
+  // Open Confirmation Modal - Simplified
   const modal = document.createElement('div')
-  modal.id = 'cashout-details-modal'
+  modal.id = 'cashout-confirm-modal'
   modal.className = 'modal-overlay active'
   modal.innerHTML = `
     <div class="modal-card">
       <div class="modal-header">
-        <h2>Cashout Details</h2>
+        <h2>Confirm Cashout</h2>
         <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
       </div>
       <div class="modal-body">
-        <p style="margin-bottom:15px; color:#666;">Provide your account details for withdrawal of <strong>₱${amount}</strong></p>
-        <div class="form-group">
-          <label>Payment Method</label>
-          <select id="co-method">
-            <option value="GCash">GCash</option>
-            <option value="Maya">Maya</option>
-            <option value="GoTyme">GoTyme</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Account Name</label>
-          <input type="text" id="co-name" placeholder="Full Registered Name" required>
-        </div>
-        <div class="form-group">
-          <label>Account Number</label>
-          <input type="text" id="co-number" placeholder="09XX-XXX-XXXX" required>
+        <p>You are about to withdraw <strong>₱${amount}</strong>.</p>
+        <p style="margin-top:10px;">Funds will be sent to:</p>
+        <div style="background:#f5f5f5; padding:10px; border-radius:8px; margin:10px 0;">
+            <strong>${userData.payment_method}</strong><br>
+            ${userData.payment_name}<br>
+            ${userData.payment_number}
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-primary" id="confirm-co-btn" style="width:100%">CONFIRM WITHDRAWAL</button>
+        <button class="btn btn-primary" id="confirm-co-btn" style="width:100%">CONFIRM</button>
       </div>
     </div>
   `
   document.body.appendChild(modal)
 
   document.getElementById('confirm-co-btn').onclick = async () => {
-    const method = document.getElementById('co-method').value
-    const name = document.getElementById('co-name').value.trim()
-    const number = document.getElementById('co-number').value.trim()
-
-    if (!name || !number) {
-      alert('Please fill in all details')
-      return
-    }
-
     try {
       modal.innerHTML = '<div class="modal-card" style="text-align:center; padding:50px;"><h3>Processing...</h3></div>'
       const resp = await fetch('/api/cashouts', {
@@ -524,8 +886,8 @@ window.requestCashout = async function () {
         body: JSON.stringify({
           userId: userData.id,
           amount,
-          method,
-          details: `${name} (${number})`
+          method: userData.payment_method,
+          details: `${userData.payment_name} (${userData.payment_number})`
         })
       })
 
@@ -549,7 +911,7 @@ window.requestCashout = async function () {
 }
 
 async function checkDailyBananas() {
-  if (!userData.subscription || userData.subscription === 'basic') return
+  if (!userData.subscription || userData.subscription === 'None') return
 
   // Check locally first to avoid unnecessary calls (optimization)
   const lastDaily = userData.last_daily_banana ? new Date(userData.last_daily_banana) : null

@@ -145,6 +145,9 @@ function applyReferral(referralCode, newUserId) {
   const ref = db.prepare('SELECT * FROM users WHERE UPPER(referral_code) = ?').get(referralCode.toUpperCase());
   if (!ref) return;
 
+  // Check if referrer is KYC approved
+  if (ref.kyc_status !== 'approved') return;
+
   // Update referrer
   db.prepare('UPDATE users SET bananas = bananas + 1, referrals = referrals + 1 WHERE id = ?').run(ref.id);
 
@@ -213,13 +216,16 @@ function updateCashoutStatus(id, status, reason) {
 }
 
 // KYC helpers
-function createKyc({ userId, filename, filepath }) {
+function createKyc({ userId, filename, filepath, details }) {
   const kid = Math.random().toString(36).slice(2, 10);
   const now = new Date().toISOString();
+
+  const { first_name, last_name, address, birthdate } = details || {};
+
   db.prepare(`
-    INSERT INTO kyc (id, userId, filename, filepath, status, submitted_at)
-    VALUES (?, ?, ?, ?, 'pending', ?)
-  `).run(kid, userId, filename, filepath, now);
+    INSERT INTO kyc (id, userId, filename, filepath, status, submitted_at, first_name, last_name, address, birthdate)
+    VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)
+  `).run(kid, userId, filename, filepath, now, first_name || null, last_name || null, address || null, birthdate || null);
 
   // update user
   db.prepare(`
@@ -270,11 +276,64 @@ function feedChicken(userId) {
   if (!user) throw new Error('User not found');
   if (user.bananas < 2) throw new Error('Not enough bananas');
 
+  // Check limits
+  const isFree = !user.subscription || user.subscription === 'basic' || user.subscription === 'None';
+  if (isFree) { // 'basic' is the 50 peso one, wait, user said "FREE acount 1 egg daily". 
+    // Let's assume 'None' is free. 'basic' usually implies paid. 
+    // Checking previous code: "basic" is 50 pesos. "None" is default.
+    // So Free = 'None' (or null).
+
+    // Using user logic: "on FREE acount 1 egg daily"
+    // "on subscriptions: 4 daily bananas" -> implied basic?
+    // Let's stick to: if subscription is null/None -> Free.
+  }
+
+  // Reload user to be sure (limit checking)
+  // Logic: 
+  // If Free: Max 1 egg today.
+
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+
+  let eggsToday = user.eggs_today || 0;
+  const lastDate = user.last_egg_date;
+
+  if (lastDate !== todayStr) {
+    eggsToday = 0; // Reset if new day
+  }
+
+  const isTrulyFree = !user.subscription || user.subscription === 'None';
+  if (isTrulyFree && eggsToday >= 1) {
+    throw new Error('Daily egg limit reached for free account. Upgrade to earn more!');
+  }
+
+  // Update: -2 bananas, +1 egg (NO BALANCE INCREASE), update daily counters
   db.prepare(`
     UPDATE users 
-    SET bananas = bananas - 2, eggs = eggs + 1, balance = balance + 1 
+    SET bananas = bananas - 2, 
+        eggs = eggs + 1, 
+        eggs_today = ?, 
+        last_egg_date = ?
     WHERE id = ?
-  `).run(userId);
+  `).run((lastDate !== todayStr ? 1 : eggsToday + 1), todayStr, userId);
+
+  return getUserById(userId);
+}
+
+function sellEggs(userId, amount) {
+  const user = getUserById(userId);
+  if (!user) throw new Error('User not found');
+  if (user.eggs < amount) throw new Error('Not enough eggs');
+
+  // Logic: 1 egg = 1 Peso (implied from previous "feed 2 bananas get 1 egg, +1 balance")
+  const value = amount;
+
+  db.prepare(`
+    UPDATE users 
+    SET eggs = eggs - ?, 
+        balance = balance + ? 
+    WHERE id = ?
+  `).run(amount, value, userId);
 
   return getUserById(userId);
 }
@@ -282,7 +341,7 @@ function feedChicken(userId) {
 function claimDailyBonus(userId) {
   const user = getUserById(userId);
   if (!user) throw new Error('User not found');
-  if (!user.subscription || user.subscription === 'basic' || user.subscription === 'None') throw new Error('No active premium subscription');
+  if (!user.subscription || user.subscription === 'None') throw new Error('No active subscription');
 
   const now = new Date();
   const last = user.last_daily_banana ? new Date(user.last_daily_banana) : null;
@@ -290,20 +349,26 @@ function claimDailyBonus(userId) {
     throw new Error('Already claimed today');
   }
 
-  const amount = user.subscription === 'premium' ? 20 : 50;
+  let amount = 0;
+  if (user.subscription === 'basic') amount = 4;
+  else if (user.subscription === 'premium') amount = 20;
+  else if (user.subscription === 'vip') amount = 50;
+
+  if (amount === 0) throw new Error('Subscription has no daily bonus');
+
   db.prepare('UPDATE users SET bananas = bananas + ?, last_daily_banana = ? WHERE id = ?').run(amount, now.toISOString(), userId);
 
   return { user: getUserById(userId), added: amount };
 }
 
 // Subscription requests
-function createSubscriptionRequest(userId, plan, price, method, refNumber) {
+function createSubscriptionRequest(userId, plan, price, method, refNumber, receiptUrl) {
   const rid = Math.random().toString(36).slice(2, 10);
   const now = new Date().toISOString();
   db.prepare(`
-    INSERT INTO subscription_requests (id, userId, plan, price, method, refNumber, status, requested_at)
-    VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)
-  `).run(rid, userId, plan, price, method, refNumber, now);
+    INSERT INTO subscription_requests (id, userId, plan, price, method, refNumber, receipt_url, status, requested_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+  `).run(rid, userId, plan, price, method, refNumber, receiptUrl || null, now);
   return db.prepare('SELECT * FROM subscription_requests WHERE id = ?').get(rid);
 }
 
@@ -323,9 +388,13 @@ function updateSubscriptionRequestStatus(id, status, reason) {
   db.prepare("UPDATE subscription_requests SET status = ?, rejection_reason = ?, processed_at = ? WHERE id = ?").run(status, reason || null, now, id);
 
   if (status === 'approved') {
-    const bonus = req.plan === 'premium' ? 20 : (req.plan === 'vip' ? 50 : 0);
-    db.prepare('UPDATE users SET subscription = ?, subscription_purchased_at = ?, bananas = bananas + ? WHERE id = ?')
-      .run(req.plan, now, bonus, req.userId);
+    let bonus = 0;
+    if (req.plan === 'basic') bonus = 4;
+    else if (req.plan === 'premium') bonus = 20;
+    else if (req.plan === 'vip') bonus = 50;
+
+    db.prepare('UPDATE users SET subscription = ?, subscription_purchased_at = ?, bananas = bananas + ?, last_daily_banana = ? WHERE id = ?')
+      .run(req.plan, now, bonus, now, req.userId);
   }
   return db.prepare('SELECT * FROM subscription_requests WHERE id = ?').get(id);
 }
@@ -390,5 +459,7 @@ module.exports = {
   toggleAdmin,
   deleteUser,
   getSettings,
-  updateSettings
+  updateSettings,
+  updateUser,
+  sellEggs
 };

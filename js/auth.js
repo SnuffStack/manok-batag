@@ -1,6 +1,6 @@
 let currentUser = null
 
-export function checkAuthState() {
+export async function checkAuthState() {
   // Sync with local session events (local mode) and ensure UI updates when session changes
   window.addEventListener('localAuthChange', (e) => {
     const user = e?.detail ?? null
@@ -24,11 +24,11 @@ export function initApp() {
 
   // Check if we're on auth page or dashboard
   if (!currentUser) {
-    showAuthPage()
+    showAuthPage('login')
   }
 }
 
-export function showAuthPage() {
+export function showAuthPage(view = 'login') {
   const app = document.getElementById('app')
   app.innerHTML = `
     <div class="auth-container">
@@ -36,7 +36,7 @@ export function showAuthPage() {
       <div class="chicken-auth-wrapper">
         <img src="/chicken.png" class="chicken-auth-img" alt="Chicken">
       </div>
-      <div class="auth-box" style="position:relative; z-index:10;">
+      <div class="auth-box">
         <div id="auth-content">
           <div id="auth-form"></div>
         </div>
@@ -50,11 +50,14 @@ export function showAuthPage() {
   import('./homepage.js').then(m => {
     if (typeof m.initParticles === 'function') m.initParticles()
   }).catch(() => {
-    // Fallback if global
     if (typeof window.initParticles === 'function') window.initParticles()
   })
 
-  showSignup()
+  if (view === 'login') {
+    showLogin()
+  } else {
+    showSignup()
+  }
 }
 
 window.showSignup = function () {
@@ -403,6 +406,9 @@ export async function loadUserData() {
       user.is_admin = true
     }
 
+    // Stop BGM if entering dashboard or admin panel
+    import('./homepage.js').then(m => m.stopBGM())
+
     // Check if user is admin
     if (user.is_admin) {
       // if we are explicitly asking for admin panel via hash or just logging in as admin
@@ -411,23 +417,10 @@ export async function loadUserData() {
       return
     }
 
-    // Check KYC status
-    if (!user.kyc_submitted || user.kyc_status === 'none') {
-      showKYCPage(user)
-      return
-    }
 
-    if (user.kyc_status === 'pending') {
-      showKYCStatus('pending')
-      return
-    }
 
-    if (user.kyc_status === 'rejected') {
-      showKYCStatus('rejected')
-      return
-    }
 
-    // Show dashboard
+    // Show dashboard regardless of KYC status (per user request: "user can log in even its not approved yet")
     import('./dashboard.js').then(module => {
       module.showDashboard(user)
     })
@@ -446,7 +439,7 @@ export async function loadUserData() {
   }
 }
 
-function showKYCPage(userData) {
+export function showKYCPage(userData) {
   const app = document.getElementById('app')
   const existingPreview = userData && (userData.kyc_document_url || userData.kyc_document)
   app.innerHTML = `
@@ -454,9 +447,25 @@ function showKYCPage(userData) {
       <div class="auth-box">
         <h1>📋 KYC Verification</h1>
         <p style="text-align: center; margin-bottom: 20px; color: var(--gray);">
-          Please upload a valid ID to continue
+          Please fill out your details and upload a valid ID to continue
         </p>
         <form id="kyc-form" onsubmit="handleKYC(event)">
+          <div class="form-group">
+            <label>First Name</label>
+            <input type="text" id="kyc-first-name" required placeholder="First Name">
+          </div>
+          <div class="form-group">
+            <label>Last Name</label>
+            <input type="text" id="kyc-last-name" required placeholder="Last Name">
+          </div>
+          <div class="form-group">
+            <label>Address</label>
+            <textarea id="kyc-address" required placeholder="Full Address" style="width:100%; border:2px solid var(--border); border-radius:12px; padding:12px;"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Date of Birth</label>
+            <input type="date" id="kyc-birthdate" required>
+          </div>
           <div class="form-group">
             <label>ID Type</label>
             <select id="id-type" required>
@@ -468,15 +477,18 @@ function showKYCPage(userData) {
             </select>
           </div>
           <div class="form-group">
+            <label>Upload ID Photo</label>
             <div class="file-upload" onclick="document.getElementById('id-file').click()">
               <input type="file" id="id-file" accept="image/*" required>
               <label class="file-upload-label" id="file-label">Click to upload ID</label>
             </div>
           </div>
-          <button type="submit" class="btn btn-primary">Submit KYC</button>
+          <button type="submit" class="btn btn-primary">Submit Verification</button>
           <div id="kyc-message"></div>
         </form>
-        ${existingPreview ? `\n          <div style="margin-top:16px; text-align:center">\n            <strong>Existing submission:</strong><br/>\n            <a href="${existingPreview}" target="_blank"><img src="${existingPreview}" style="max-width:200px; border-radius:6px; margin-top:8px;" /></a>\n          </div>` : ''}
+        <div style="margin-top:20px; text-align:center;">
+          <a onclick="goToLandingPage()" style="cursor:pointer; color:var(--gray);">Skip for now (Limited Access)</a>
+        </div>
       </div>
     </div>
   `
@@ -517,6 +529,13 @@ window.handleKYC = async function (event) {
     const idType = document.getElementById('id-type').value
     fd.append('userId', uid)
     fd.append('idType', idType)
+
+    // Append new fields
+    fd.append('first_name', document.getElementById('kyc-first-name').value.trim())
+    fd.append('last_name', document.getElementById('kyc-last-name').value.trim())
+    fd.append('address', document.getElementById('kyc-address').value.trim())
+    fd.append('birthdate', document.getElementById('kyc-birthdate').value)
+
     fd.append('file', idFile, idFile.name)
 
     try {
@@ -533,17 +552,14 @@ window.handleKYC = async function (event) {
       try { window.dispatchEvent(new CustomEvent('serverKycSubmitted', { detail: { userId: uid, publicUrl } })) } catch (e) { /* ignore */ }
 
       messageDiv.innerHTML = `
-        <div class="alert alert-success">KYC submitted! Waiting for approval...</div>
-        <div style="margin-top:10px;">
-          <strong>Preview:</strong><br/>
-          <a href="${publicUrl}" target="_blank"><img src="${publicUrl}" style="max-width:100%; border-radius:6px; margin-top:8px;" /></a>
-        </div>`
+        <div class="alert alert-success">KYC submitted! Please sign in again.</div>`
 
-      // give backend a moment then redirect to landing page
+      // redirect to sign in not sign up (per req: "redirect to sign in not to sign up")
       setTimeout(async () => {
-        const { showHomepage } = await import('./homepage.js')
-        showHomepage()
-      }, 2500)
+        // Clear session to force re-login or just go to login page
+        // actually, redirecting to login page is requested.
+        showAuthPage('login')
+      }, 1500)
       return
     } catch (err) {
       messageDiv.innerHTML = '<div class="alert alert-error">❌ Upload failed: ' + err.message + '</div>'
@@ -614,7 +630,7 @@ export async function logout() {
   localStorage.removeItem('local_is_admin')
   localStorage.removeItem('local_current_user')
   window.dispatchEvent(new CustomEvent('localAuthChange', { detail: null }))
-  showAuthPage()
+  showAuthPage('login')
 }
 
 window.togglePassword = function (inputId, button) {

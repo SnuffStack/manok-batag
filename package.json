@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "server": "npm run dev --prefix server",
     "dev:all": "npx -y concurrently \"npm run dev\" \"npm run server\"",
     "build": "vite build",

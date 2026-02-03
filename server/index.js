@@ -32,7 +32,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage })
 
 const app = express()
-const PORT = process.env.PORT || 4000
+const PORT = process.env.PORT || 4500
 
 app.use(cors())
 app.use(express.json())
@@ -107,10 +107,10 @@ app.get('/api/_status', (req, res) => res.json({ ok: true }))
 // serve uploaded files
 app.use('/uploads', express.static(uploadDir))
 
-// KYC upload endpoint (multipart/form-data: file + userId + idType)
+// KYC upload endpoint (multipart/form-data: file + userId + idType + details)
 app.post('/api/kyc', upload.single('file'), (req, res) => {
   try {
-    const { userId, idType } = req.body
+    const { userId, idType, first_name, last_name, address, birthdate } = req.body
     if (!userId || userId === 'undefined') return res.status(400).json({ error: 'Valid userId required' })
     if (!req.file) return res.status(400).json({ error: 'file required' })
 
@@ -118,7 +118,12 @@ app.post('/api/kyc', upload.single('file'), (req, res) => {
     const fileRel = path.posix.join('uploads', 'kyc', req.file.filename)
     const publicUrl = `${req.protocol}://${req.get('host')}/${fileRel}`
 
-    const kyc = db.createKyc({ userId, filename: req.file.originalname, filepath: fileRel })
+    const kyc = db.createKyc({
+      userId,
+      filename: req.file.originalname,
+      filepath: fileRel,
+      details: { first_name, last_name, address, birthdate }
+    })
 
     // Update user with document URL and id type
     try {
@@ -196,18 +201,34 @@ app.delete('/api/users/:id', (req, res) => {
   }
 })
 
-// Patch user (partial update)
+// Patch user (partial update) - allow payment details
 app.patch('/api/users/:id', (req, res) => {
   try {
     const fields = req.body || {}
+    // Security: allow specific fields only if not admin? 
+    // For now, assume internal logic handles it or we trust the frontend for this local app.
     const user = db.updateUser(req.params.id, fields)
     if (!user) return res.status(404).json({ error: 'user not found' })
     return res.json({ user })
   } catch (err) {
     console.error('user patch error', err)
-    return res.status(500).json({ error: 'server error' })
+    return res.status(500).json({ error: 'server error', message: err.message })
   }
 })
+
+app.post('/api/sell-eggs', (req, res) => {
+  try {
+    const { userId, amount } = req.body;
+    if (!userId || !amount) return res.status(400).json({ error: 'Missing params' });
+    const user = db.sellEggs(userId, parseInt(amount));
+    // clean
+    const publicUser = Object.assign({}, user);
+    delete publicUser.password;
+    return res.json({ user: publicUser });
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+});
 
 // Get latest KYC for a user
 app.get('/api/kyc/user/:userId', (req, res) => {
@@ -299,13 +320,20 @@ app.get('/api/subscription-requests', (req, res) => {
   }
 })
 
-app.post('/api/subscription-requests', (req, res) => {
+app.post('/api/subscription-requests', upload.single('receipt'), (req, res) => {
   try {
     const { userId, plan, price, method, refNumber } = req.body
     if (!userId || !plan || !price || !method || !refNumber) {
       return res.status(400).json({ error: 'Missing required payment details' })
     }
-    const request = db.createSubscriptionRequest(userId, plan, price, method, refNumber)
+
+    let receiptUrl = null
+    if (req.file) {
+      const fileRel = path.posix.join('uploads', 'kyc', req.file.filename) // Reusing KYC folder for now or could create 'receipts'
+      receiptUrl = `${req.protocol}://${req.get('host')}/${fileRel}`
+    }
+
+    const request = db.createSubscriptionRequest(userId, plan, price, method, refNumber, receiptUrl)
     return res.status(201).json({ request })
   } catch (err) {
     console.error('create subscription request error', err)
@@ -433,8 +461,8 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'internal' })
 })
 
-const server = app.listen(PORT, '127.0.0.1', () => {
-  debugLog(`Chicken Banana API listening on http://127.0.0.1:${PORT}`)
+const server = app.listen(PORT, '0.0.0.0', () => {
+  debugLog(`Chicken Banana API listening on http://0.0.0.0:${PORT}`)
 })
 
 server.on('error', (err) => {

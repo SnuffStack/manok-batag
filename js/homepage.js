@@ -12,7 +12,7 @@ export function showHomepage() {
           <h1 class="hero-title">CHICKEN BANANA</h1>
           <p class="hero-description">Feed your flock, harvest golden rewards, and unlock real value in the ultimate farm-to-earn adventure. Join the revolution today!</p>
           <div class="hero-buttons">
-            <button class="btn btn-cta-start" onclick="goToSignup()">START FARMING <span class="btn-cta-arrow">→</span></button>
+            <button class="btn btn-cta-start" onclick="goToLogin()">START FARMING <span class="btn-cta-arrow">→</span></button>
             <button class="btn btn-cta-ghost" onclick="showHowItWorks()">HOW IT WORKS</button>
           </div>
         </div>
@@ -20,6 +20,7 @@ export function showHomepage() {
     </div>
   `
   initParticles()
+  initBGM()
 
   // If there's a referral code in the URL, automatically open the signup form with the code applied
   try {
@@ -34,29 +35,20 @@ export function showHomepage() {
 
 window.goToSignup = async function (ref) {
   const { showAuthPage } = await import('./auth.js')
-  showAuthPage()
-  setTimeout(() => {
-    if (typeof window.showSignup === 'function') {
-      window.showSignup()
-      if (ref) {
-        // prefill the referral code on the signup form and show a small inline message
-        const el = document.getElementById('referral-code')
-        const msg = document.getElementById('signup-message')
-        if (el) el.value = ref.toUpperCase()
-        if (msg) msg.innerHTML = `<div class="alert alert-info">Referral code <strong>${ref.toUpperCase()}</strong> applied</div>`
-      }
-    }
-  }, 100)
+  showAuthPage('signup')
+  if (ref) {
+    setTimeout(() => {
+      const el = document.getElementById('referral-code')
+      const msg = document.getElementById('signup-message')
+      if (el) el.value = ref.toUpperCase()
+      if (msg) msg.innerHTML = `<div class="alert alert-info">Referral code <strong>${ref.toUpperCase()}</strong> applied</div>`
+    }, 50)
+  }
 }
 
 window.goToLogin = async function () {
   const { showAuthPage } = await import('./auth.js')
-  showAuthPage()
-  setTimeout(() => {
-    if (typeof window.showLogin === 'function') {
-      window.showLogin()
-    }
-  }, 100)
+  showAuthPage('login')
 }
 
 window.showHowItWorks = function () {
@@ -144,4 +136,45 @@ function createParticle(container, items) {
       createParticle(container, items)
     }
   }, duration * 1000)
+}
+
+function initBGM() {
+  if (window.bgm) {
+    if (window.bgm.paused) {
+      window.bgm.play().catch(() => { })
+      updateBGMIcon(true)
+    }
+    // Ensure toggle is present if we are re-initializing page content
+    if (!document.getElementById('bgm-toggle')) addBGMToggle()
+    return
+  }
+
+  const bgm = new Audio('/assets/sounds/Chicken-Banana.mp3')
+  bgm.loop = true
+  bgm.volume = 0.4
+  window.bgm = bgm
+
+  let isPlaying = false
+
+  bgm.play().then(() => {
+    isPlaying = true
+  }).catch(() => {
+    // Fallback: Play on interaction
+    const playOnInteraction = () => {
+      bgm.play().then(() => {
+        isPlaying = true
+      })
+      document.removeEventListener('click', playOnInteraction)
+      document.removeEventListener('touchstart', playOnInteraction)
+    }
+    document.addEventListener('click', playOnInteraction)
+    document.addEventListener('touchstart', playOnInteraction)
+  })
+}
+
+export function stopBGM() {
+  if (window.bgm) {
+    window.bgm.pause()
+    window.bgm.currentTime = 0
+  }
 }

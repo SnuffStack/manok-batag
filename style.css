@@ -26,7 +26,7 @@ body {
   min-height: 100vh;
   margin: 0;
   padding: 0;
-  background-color: #d1f2d1 !important;
+  background-color: #F4FFF8 !important;
   /* Ensure background persists on scroll */
 }
 
@@ -49,10 +49,22 @@ body {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
+  width: 100%;
   padding: 20px;
   position: relative;
-  background-color: #d1f2d1;
-  overflow: hidden;
+  background-color: #F4FFF8 !important;
+  /* Use theme color */
+  overflow-x: hidden;
+}
+
+.particle-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .auth-box {
@@ -63,6 +75,8 @@ body {
   max-width: 400px;
   width: 100%;
   border: 3px solid var(--primary-green);
+  position: relative;
+  z-index: 100;
 }
 
 .auth-box h1 {
@@ -227,24 +241,21 @@ body {
 /* Auth Page Mobile Responsiveness */
 @media (max-width: 600px) {
   .auth-container {
-    padding: 15px;
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    min-height: 100vh;
-    width: 100%;
+    padding: 10px;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
   }
 
   .auth-box {
-    padding: 24px;
+    padding: 20px 16px;
     border-radius: 16px;
     border-width: 2px;
-    margin: 0 auto;
     width: 100%;
-    max-width: 400px;
-    position: relative;
-    left: 0;
-    right: 0;
+    max-width: 100%;
+    /* Ensure it doesn't overflow */
+    margin: 0;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   }
 
   .auth-box h1 {
@@ -286,7 +297,7 @@ body {
 /* Dashboard Premium Redesign */
 .dashboard-wrapper {
   min-height: 100vh;
-  background-color: #d1f2d1;
+  background-color: #F4FFF8;
   padding: 0 0 40px 0;
   color: #2c3e50;
 }
@@ -392,11 +403,88 @@ body {
 
 @media (max-width: 600px) {
   .stats-container {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, 1fr);
+    /* Force 3 columns */
+    gap: 4px;
+    /* Minimize gap */
   }
 
   .stat-card {
-    padding: 20px;
+    padding: 6px 4px;
+    /* Consistent padding */
+    flex-direction: column;
+    text-align: center;
+    gap: 3px;
+    align-items: center;
+    justify-content: flex-start;
+    /* Keep content at top */
+    min-height: 95px;
+    /* Fixed minimum height */
+    display: flex;
+  }
+
+  .stat-icon {
+    width: 24px;
+    /* Consistent icon size */
+    height: 24px;
+    font-size: 1rem;
+    margin-bottom: 2px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    /* Prevent shrinking */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .stat-info {
+    align-items: center;
+    gap: 0;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 28px;
+    /* Fixed height for number area */
+    justify-content: flex-start;
+    /* Align numbers to top of this container */
+  }
+
+  .stat-label {
+    display: none;
+    /* Hide label entirely */
+  }
+
+  .stat-value {
+    font-size: 0.9rem;
+    /* Slightly larger for readability */
+    margin: 2px 0;
+    line-height: 1.2;
+    min-width: 50px;
+    /* Fixed width for alignment */
+    display: block;
+    text-align: center;
+    font-weight: 800;
+    height: 20px;
+    /* Fixed height */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .stat-card .btn-sm {
+    margin-left: 0;
+    padding: 0;
+    font-size: 0.6rem;
+    width: 100%;
+    margin-top: auto;
+    /* Push button to bottom */
+    height: 20px;
+    /* Fixed height for consistency */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    flex-shrink: 0;
   }
 }
 
@@ -410,11 +498,33 @@ body {
   gap: 20px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.03);
   border: 1px solid rgba(46, 125, 50, 0.1);
-  transition: transform 0.3s;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  cursor: pointer;
+  overflow: hidden;
+  position: relative;
 }
 
 .stat-card:hover {
-  transform: translateY(-5px);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(76, 175, 80, 0.1);
+  border-color: var(--primary-green);
+}
+
+.stat-card::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.stat-card:hover::after {
+  opacity: 1;
 }
 
 .stat-icon {
@@ -458,14 +568,43 @@ body {
   color: #333;
 }
 
+.btn-sm {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: var(--primary-green);
+  color: var(--white);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-sm:hover {
+  background: var(--dark-green);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.btn-sm:active {
+  transform: translateY(0);
+}
+
 /* Base Card Style */
 .card {
   background: #f1fcf4;
-  /* Lighter mint for transparency feel */
   border-radius: 24px;
   padding: 32px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
   border: 1px solid rgba(46, 125, 50, 0.1);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.06);
 }
 
 .card-header {
@@ -536,9 +675,44 @@ body {
   pointer-events: auto;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 600px) {
   .chicken-main img {
-    max-height: 350px;
+    max-height: 320px;
+    /* Much larger chicken on mobile */
+  }
+
+  .farm-display {
+    margin: 8px 0;
+    /* Tighten margin */
+  }
+
+  .grassy-field {
+    height: 160px;
+    /* Keep container smaller so chicken overflows */
+    overflow: visible;
+    /* Allow chicken to overflow */
+  }
+
+  .chicken-main {
+    height: 180px;
+    overflow: visible;
+    /* Allow overflow */
+  }
+
+  .farm-section.card {
+    padding: 16px;
+    /* Reduce card padding */
+  }
+
+  .btn-feed {
+    padding: 10px 24px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 768px) {
+  .chicken-main img {
+    max-height: 300px;
   }
 }
 
@@ -716,13 +890,27 @@ body {
 }
 
 .subscription-card.featured {
-  border-color: #81c784;
+  border-color: #FFD700;
   background: #fff;
-  /* Keep featured white to pop, or light mint? Let's try light mint */
-  background: #fdfdfd;
-  transform: scale(1.05);
-  box-shadow: 0 20px 40px rgba(76, 175, 80, 0.1);
+  box-shadow: 0 20px 60px rgba(255, 215, 0, 0.15);
+  transform: translateY(-5px);
   z-index: 2;
+  border-width: 3px;
+}
+
+.subscription-card.featured::before {
+  content: 'MOST POPULAR';
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #FFD700;
+  color: #3C2A20;
+  padding: 4px 16px;
+  border-radius: 100px;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 1px;
 }
 
 .subscription-card.active {
@@ -1103,7 +1291,7 @@ body {
     font-size: 1.8rem;
   }
 
-  .logout-pill span {
+  .logout-pill span:not(#mute-icon) {
     display: none;
   }
 
@@ -1294,9 +1482,7 @@ body {
 }
 
 @media (max-width: 768px) {
-
-  .chicken-hero-wrapper,
-  .chicken-auth-wrapper {
+  .chicken-hero-wrapper {
     position: relative;
     right: auto;
     top: auto;
@@ -1304,7 +1490,15 @@ body {
     width: 80%;
     margin: 20px auto;
     order: -1;
-    /* Move chicken above text on mobile */
+  }
+
+  .chicken-auth-wrapper {
+    position: absolute;
+    width: 60%;
+    left: -10%;
+    top: 20%;
+    opacity: 0.3;
+    z-index: 0;
   }
 }
 
@@ -1993,5 +2187,182 @@ code {
   .btn-cta-ghost {
     width: 100%;
     max-width: 300px;
+  }
+}
+
+/* Subscription Mobile Toggle Logic */
+.sub-header {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sub-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  position: relative;
+}
+
+.toggle-icon {
+  display: none;
+  /* Hidden on desktop */
+  font-size: 1.2rem;
+  color: #888;
+  position: absolute;
+  right: 0;
+  top: 0;
+  cursor: pointer;
+  transition: transform 0.3s;
+}
+
+/* History Section Desktop Override */
+.history-section .toggle-icon {
+  display: block;
+  /* Always visible for history */
+  position: static;
+  /* Standard flow */
+  font-size: 1.2rem;
+  color: var(--primary-green);
+  transition: all 0.3s ease;
+}
+
+/* Interactive History Card Header */
+.history-section .card-header.clickable {
+  transition: all 0.2s ease;
+  border-radius: 12px;
+  padding: 12px 16px;
+  user-select: none;
+}
+
+.history-section .card-header.clickable:hover {
+  background: rgba(46, 125, 50, 0.05);
+  transform: translateX(2px);
+}
+
+.history-section .card-header.clickable:hover .toggle-icon {
+  color: var(--dark-green);
+  transform: scale(1.1);
+}
+
+.history-section .card-header.clickable:active {
+  transform: translateX(0px) scale(0.98);
+}
+
+/* Smooth expand/collapse animation */
+#cashout-history-container {
+  overflow: hidden;
+  transition: max-height 0.4s ease, opacity 0.3s ease;
+  max-height: 0;
+  opacity: 0;
+}
+
+#cashout-history-container.expanded {
+  max-height: 1000px;
+  opacity: 1;
+}
+
+.sub-details {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+@media (max-width: 600px) {
+  .sub-header {
+    cursor: pointer;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 0;
+    margin-bottom: 0;
+    width: 100%;
+  }
+
+  .sub-header-top {
+    display: contents;
+    /* Allows reordering of children */
+  }
+
+  /* Tag on LEFT */
+  .subscription-tag {
+    order: 1;
+    margin-bottom: 0;
+    margin-right: auto;
+  }
+
+  /* Price on RIGHT */
+  .subscription-price {
+    order: 2;
+    margin-bottom: 0;
+    font-size: 1.5rem;
+  }
+
+  /* Icon on FAR RIGHT, next to price */
+  .toggle-icon {
+    display: block;
+    order: 3;
+    position: static;
+    margin-left: 10px;
+    transform: none;
+    transition: transform 0.3s;
+  }
+
+  /* Explicitly hide desktop absolute icon on mobile */
+  .sub-header-top .toggle-icon {
+    position: static !important;
+  }
+
+  /* Default collapsed state for mobile */
+  .sub-details {
+    display: none;
+    margin-top: 20px;
+    animation: slideDown 0.3s ease-out;
+  }
+
+  /* Expanded state */
+  .subscription-card.expanded .sub-details {
+    display: flex;
+  }
+
+  .subscription-card.expanded .toggle-icon {
+    transform: rotate(180deg);
+  }
+
+  .subscription-card {
+    padding: 16px;
+    align-items: stretch;
+    /* Stretch to allow header to fill */
+  }
+
+  .sub-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .subscription-price {
+    margin-bottom: 0;
+    font-size: 1.5rem;
+  }
+
+  .subscription-tag {
+    margin-bottom: 0;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

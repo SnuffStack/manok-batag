@@ -1255,7 +1255,7 @@ function showUserDetails(userId) {
       <div class="ud-center">
         <div class="ud-email">${u.email}</div>
         <div class="ud-code">CODE: ${u.referral_code ? (u.referral_code.toUpperCase()) : '—'}</div>
-        <div style="margin-top:6px"><button class="btn-sm btn-secondary" onclick="copyReferralLink('${u.id}')">Copy link</button></div>
+        <div style="margin-top:6px"><button class="btn-sm btn-secondary" onclick="adminCopyReferralLink('${u.id}')">Copy link</button></div>
         <div class="ud-meta">LVL ${u.level || 1} • ${u.subscription || 'None'} ${typeof referralsCount === 'number' ? ' • Referrals: ' + referralsCount : ''}</div>
         <div class="ud-stats" style="margin-top:10px;display:flex;gap:12px;color:#333;font-weight:700">
           <div>🍌 ${u.bananas || 0}</div>
@@ -1484,7 +1484,8 @@ window.rejectSubscription = rejectSubscription
 window.deleteUserConfirmed = deleteUserConfirmed
 
 // Referral helper (copy to clipboard)
-function copyReferralLink(userId) {
+// Referral helper (copy to clipboard)
+function adminCopyReferralLink(userId) {
   const users = loadUsersData()
   const u = users.find(x => x.id === userId)
   if (!u) return showToast('User not found', 'error')
@@ -1512,7 +1513,7 @@ function copyReferralLink(userId) {
   }
 }
 
-window.copyReferralLink = copyReferralLink
+window.adminCopyReferralLink = adminCopyReferralLink
 
 // Replace signOut with a local logout fallback
 function handleAdminLogout() {
