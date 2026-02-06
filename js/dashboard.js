@@ -109,7 +109,7 @@ export async function showDashboard(data) {
                     <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 4 daily bananas</li>
                     <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> No minimum cashout</li>
                 </ul>
-                ${data.subscription === 'basic' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" onclick="purchaseSubscription('basic', 50)">Activate Subscription</button>`}
+                ${data.subscription === 'basic' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" data-plan="basic" onclick="purchaseSubscription('basic', 50)">Activate Subscription</button>`}
               </div>
             </div>
             
@@ -126,11 +126,11 @@ export async function showDashboard(data) {
                     <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 20 daily bananas</li>
                     <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> No minimum cashout</li>
                   </ul>
-                  ${data.subscription === 'premium' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" onclick="purchaseSubscription('premium', 100)">Activate Subscription</button>`}
+                  ${data.subscription === 'premium' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" data-plan="premium" onclick="purchaseSubscription('premium', 100)">Activate Subscription</button>`}
               </div>
             </div>
             
-            <div class="subscription-card ${data.subscription === 'vip' ? 'active' : ''}">
+            <div class="subscription-card vip ${data.subscription === 'vip' ? 'active' : ''}">
               <div class="sub-header" onclick="toggleSub(this)">
                 <div class="sub-header-top">
                     <div class="subscription-tag">VIP</div>
@@ -143,7 +143,7 @@ export async function showDashboard(data) {
                     <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 50 daily bananas</li>
                     <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> No minimum cashout</li>
                   </ul>
-                  ${data.subscription === 'vip' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" onclick="purchaseSubscription('vip', 200)">Activate Subscription</button>`}
+                  ${data.subscription === 'vip' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" data-plan="vip" onclick="purchaseSubscription('vip', 200)">Activate Subscription</button>`}
               </div>
             </div>
           </div>
@@ -243,11 +243,13 @@ async function checkSubscriptionRequests() {
             <strong>Subcription Pending:</strong> Your request for ${myRequest.plan.toUpperCase()} plan is currently being verified by an admin.
           </div>
         `
-        // Disable "Activate Subscription" buttons
+        // Disable "Activate Subscription" buttons but only show Pending on the target one
         document.querySelectorAll('.btn-subscription').forEach(btn => {
           if (!btn.classList.contains('active')) {
             btn.disabled = true
-            btn.textContent = 'Pending...'
+            if (btn.getAttribute('data-plan') === myRequest.plan) {
+              btn.textContent = 'Pending...'
+            }
           }
         })
       }

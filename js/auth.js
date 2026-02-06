@@ -76,7 +76,7 @@ window.showSignup = function () {
     <form id="signup-form" onsubmit="handleSignup(event)" class="auth-card-form">
       <div class="auth-logo">
         <h2>CHICKEN BANANA</h2>
-        <p class="auth-subtitle">The funniest way to earn GCash!</p>
+        <p class="auth-subtitle">The funniest way to earn!</p>
       </div>
 
       <div class="form-group">
@@ -125,7 +125,7 @@ window.showLogin = function () {
     <form id="login-form" onsubmit="handleLogin(event)" class="auth-card-form">
       <div class="auth-logo">
         <h2>CHICKEN BANANA</h2>
-        <p class="auth-subtitle">The funniest way to earn GCash!</p>
+        <p class="auth-subtitle">The funniest way to earn!</p>
       </div>
 
       <div class="form-group">
@@ -406,8 +406,7 @@ export async function loadUserData() {
       user.is_admin = true
     }
 
-    // Stop BGM if entering dashboard or admin panel
-    import('./homepage.js').then(m => m.stopBGM())
+
 
     // Check if user is admin
     if (user.is_admin) {

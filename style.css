@@ -999,6 +999,57 @@ body {
   border: none;
 }
 
+/* VIP Premium Styles */
+.subscription-card.vip {
+  border-color: #9c27b0;
+  background: linear-gradient(135deg, #fdf4ff 0%, #ffffff 100%);
+  box-shadow: 0 15px 45px rgba(156, 39, 176, 0.1);
+}
+
+.subscription-card.vip::before {
+  content: '💎 ULTIMATE';
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, #9c27b0, #e91e63);
+  color: #fff;
+  padding: 4px 16px;
+  border-radius: 100px;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 10px rgba(156, 39, 176, 0.3);
+}
+
+.vip .subscription-tag {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.vip .subscription-price {
+  color: #7b1fa2;
+}
+
+.vip .btn-subscription {
+  background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
+  color: #fff;
+  border: none;
+  box-shadow: 0 6px 15px rgba(156, 39, 176, 0.25);
+}
+
+.vip .btn-subscription:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(156, 39, 176, 0.3);
+}
+
+.vip .btn-subscription:disabled {
+  background: #f3e5f5;
+  color: #ba68c8 !important;
+  border: 1px solid #e1bee7;
+}
+
 /* Cashout Section */
 .cashout-container {
   display: flex;

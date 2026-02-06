@@ -161,16 +161,28 @@ function createCashout(userId, amount, method, details) {
   if (!user) throw new Error('User not found');
   if (user.balance < amount) throw new Error('Insufficient balance');
 
-  // Check minimums based on previous cashout count
-  const count = db.prepare('SELECT COUNT(*) as count FROM cashouts WHERE userId = ?').get(userId).count;
-  let minimum = 200;
-  if (!user.subscription || user.subscription === 'None') {
-    const mins = [5, 15, 50, 100, 200];
-    minimum = mins[count] || 200;
-  } else {
-    minimum = 0;
+  // Determine next milestone based on the highest previously approved cashout
+  const milestoneRow = db.prepare("SELECT MAX(amount) as max_amount FROM cashouts WHERE userId = ? AND status = 'approved'").get(userId);
+  const maxApproved = milestoneRow ? (milestoneRow.max_amount || 0) : 0;
+
+  let required;
+  if (maxApproved < 5) required = 5;
+  else if (maxApproved < 15) required = 15;
+  else if (maxApproved < 50) required = 50;
+  else if (maxApproved < 100) required = 100;
+  else required = 200;
+
+  if (amount !== required) {
+    if (required === 400) { // Safety check or future expansion
+      // ...
+    }
+
+    if (required === 200) {
+      throw new Error("For subsequent cashouts, the amount must be exactly 200 pesos.");
+    } else {
+      throw new Error(`Your next cashout milestone must be exactly ${required} pesos. (You have completed up to ${maxApproved} pesos)`);
+    }
   }
-  if (amount < minimum) throw new Error(`Minimum cashout is ${minimum}`);
 
   // Transaction for safety
   const runTransaction = db.transaction(() => {

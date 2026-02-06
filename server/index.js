@@ -436,7 +436,7 @@ app.post('/api/cashouts', (req, res) => {
     const cashout = db.createCashout(userId, parseFloat(amount), method, details)
     return res.json({ cashout })
   } catch (err) {
-    if (err.message.includes('Insufficient') || err.message.includes('Minimum')) return res.status(400).json({ error: err.message })
+    if (err.message.includes('Insufficient') || err.message.includes('Minimum') || err.message.includes('must be exactly') || err.message.includes('Amount must be positive')) return res.status(400).json({ error: err.message })
     console.error('create cashout error', err)
     return res.status(500).json({ error: 'server error' })
   }

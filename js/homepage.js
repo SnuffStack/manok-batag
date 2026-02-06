@@ -20,7 +20,6 @@ export function showHomepage() {
     </div>
   `
   initParticles()
-  initBGM()
 
   // If there's a referral code in the URL, automatically open the signup form with the code applied
   try {
@@ -138,43 +137,4 @@ function createParticle(container, items) {
   }, duration * 1000)
 }
 
-function initBGM() {
-  if (window.bgm) {
-    if (window.bgm.paused) {
-      window.bgm.play().catch(() => { })
-      updateBGMIcon(true)
-    }
-    // Ensure toggle is present if we are re-initializing page content
-    if (!document.getElementById('bgm-toggle')) addBGMToggle()
-    return
-  }
 
-  const bgm = new Audio('/assets/sounds/Chicken-Banana.mp3')
-  bgm.loop = true
-  bgm.volume = 0.4
-  window.bgm = bgm
-
-  let isPlaying = false
-
-  bgm.play().then(() => {
-    isPlaying = true
-  }).catch(() => {
-    // Fallback: Play on interaction
-    const playOnInteraction = () => {
-      bgm.play().then(() => {
-        isPlaying = true
-      })
-      document.removeEventListener('click', playOnInteraction)
-      document.removeEventListener('touchstart', playOnInteraction)
-    }
-    document.addEventListener('click', playOnInteraction)
-    document.addEventListener('touchstart', playOnInteraction)
-  })
-}
-
-export function stopBGM() {
-  if (window.bgm) {
-    window.bgm.pause()
-    window.bgm.currentTime = 0
-  }
-}
