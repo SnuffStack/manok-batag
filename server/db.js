@@ -162,25 +162,29 @@ function createCashout(userId, amount, method, details) {
   if (user.balance < amount) throw new Error('Insufficient balance');
 
   // Determine next milestone based on the highest previously approved cashout
-  const milestoneRow = db.prepare("SELECT MAX(amount) as max_amount FROM cashouts WHERE userId = ? AND status = 'approved'").get(userId);
-  const maxApproved = milestoneRow ? (milestoneRow.max_amount || 0) : 0;
+  const isSubscribed = user.subscription && ['basic', 'premium', 'vip'].includes(user.subscription.toLowerCase());
 
-  let required;
-  if (maxApproved < 5) required = 5;
-  else if (maxApproved < 15) required = 15;
-  else if (maxApproved < 50) required = 50;
-  else if (maxApproved < 100) required = 100;
-  else required = 200;
+  if (!isSubscribed) {
+    const milestoneRow = db.prepare("SELECT MAX(amount) as max_amount FROM cashouts WHERE userId = ? AND status = 'approved'").get(userId);
+    const maxApproved = milestoneRow ? (milestoneRow.max_amount || 0) : 0;
 
-  if (amount !== required) {
-    if (required === 400) { // Safety check or future expansion
-      // ...
-    }
+    let required;
+    if (maxApproved < 5) required = 5;
+    else if (maxApproved < 15) required = 15;
+    else if (maxApproved < 50) required = 50;
+    else if (maxApproved < 100) required = 100;
+    else required = 200;
 
-    if (required === 200) {
-      throw new Error("For subsequent cashouts, the amount must be exactly 200 pesos.");
-    } else {
-      throw new Error(`Your next cashout milestone must be exactly ${required} pesos. (You have completed up to ${maxApproved} pesos)`);
+    if (amount !== required) {
+      if (required === 400) { // Safety check or future expansion
+        // ...
+      }
+
+      if (required === 200) {
+        throw new Error("For subsequent cashouts, the amount must be exactly 200 pesos.");
+      } else {
+        throw new Error(`Your next cashout milestone must be exactly ${required} pesos. (You have completed up to ${maxApproved} pesos)`);
+      }
     }
   }
 
@@ -362,9 +366,9 @@ function claimDailyBonus(userId) {
   }
 
   let amount = 0;
-  if (user.subscription === 'basic') amount = 4;
-  else if (user.subscription === 'premium') amount = 20;
-  else if (user.subscription === 'vip') amount = 50;
+  if (user.subscription === 'basic') amount = 16;
+  else if (user.subscription === 'premium') amount = 50;
+  else if (user.subscription === 'vip') amount = 140;
 
   if (amount === 0) throw new Error('Subscription has no daily bonus');
 
@@ -401,9 +405,9 @@ function updateSubscriptionRequestStatus(id, status, reason) {
 
   if (status === 'approved') {
     let bonus = 0;
-    if (req.plan === 'basic') bonus = 4;
-    else if (req.plan === 'premium') bonus = 20;
-    else if (req.plan === 'vip') bonus = 50;
+    if (req.plan === 'basic') bonus = 16;
+    else if (req.plan === 'premium') bonus = 50;
+    else if (req.plan === 'vip') bonus = 140;
 
     db.prepare('UPDATE users SET subscription = ?, subscription_purchased_at = ?, bananas = bananas + ?, last_daily_banana = ? WHERE id = ?')
       .run(req.plan, now, bonus, now, req.userId);

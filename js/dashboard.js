@@ -99,51 +99,51 @@ export async function showDashboard(data) {
             <div class="subscription-card ${data.subscription === 'basic' ? 'active' : ''}">
               <div class="sub-header" onclick="toggleSub(this)">
                 <div class="sub-header-top">
-                    <div class="subscription-tag">BASIC</div>
+                    <div class="subscription-tag">HATCHLING</div>
                     <div class="toggle-icon">▼</div>
                 </div>
-                <div class="subscription-price">₱50</div>
+                <div class="subscription-price">₱199</div>
               </div>
               <div class="sub-details">
                 <ul class="subscription-features">
-                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 4 daily bananas</li>
+                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 16 daily bananas</li>
                     <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> No minimum cashout</li>
                 </ul>
-                ${data.subscription === 'basic' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" data-plan="basic" onclick="purchaseSubscription('basic', 50)">Activate Subscription</button>`}
+                ${data.subscription === 'basic' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" data-plan="basic" onclick="purchaseSubscription('basic', 199)">Activate Subscription</button>`}
               </div>
             </div>
             
             <div class="subscription-card featured ${data.subscription === 'premium' ? 'active' : ''}">
               <div class="sub-header" onclick="toggleSub(this)">
                 <div class="sub-header-top">
-                    <div class="subscription-tag">PREMIUM</div>
+                    <div class="subscription-tag">HEN HOUSE</div>
                      <div class="toggle-icon">▼</div>
                 </div>
-                <div class="subscription-price">₱100</div>
-              </div>
-              <div class="sub-details">
-                  <ul class="subscription-features">
-                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 20 daily bananas</li>
-                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> No minimum cashout</li>
-                  </ul>
-                  ${data.subscription === 'premium' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" data-plan="premium" onclick="purchaseSubscription('premium', 100)">Activate Subscription</button>`}
-              </div>
-            </div>
-            
-            <div class="subscription-card vip ${data.subscription === 'vip' ? 'active' : ''}">
-              <div class="sub-header" onclick="toggleSub(this)">
-                <div class="sub-header-top">
-                    <div class="subscription-tag">VIP</div>
-                     <div class="toggle-icon">▼</div>
-                </div>
-                <div class="subscription-price">₱200</div>
+                <div class="subscription-price">₱599</div>
               </div>
               <div class="sub-details">
                   <ul class="subscription-features">
                     <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 50 daily bananas</li>
                     <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> No minimum cashout</li>
                   </ul>
-                  ${data.subscription === 'vip' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" data-plan="vip" onclick="purchaseSubscription('vip', 200)">Activate Subscription</button>`}
+                  ${data.subscription === 'premium' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" data-plan="premium" onclick="purchaseSubscription('premium', 599)">Activate Subscription</button>`}
+              </div>
+            </div>
+            
+            <div class="subscription-card vip ${data.subscription === 'vip' ? 'active' : ''}">
+              <div class="sub-header" onclick="toggleSub(this)">
+                <div class="sub-header-top">
+                    <div class="subscription-tag">GOLDEN FARM</div>
+                     <div class="toggle-icon">▼</div>
+                </div>
+                <div class="subscription-price">₱1,499</div>
+              </div>
+              <div class="sub-details">
+                  <ul class="subscription-features">
+                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 140 daily bananas</li>
+                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> No minimum cashout</li>
+                  </ul>
+                  ${data.subscription === 'vip' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" data-plan="vip" onclick="purchaseSubscription('vip', 1499)">Activate Subscription</button>`}
               </div>
             </div>
           </div>
@@ -669,6 +669,13 @@ window.purchaseSubscription = async function (plan, price) {
 
   const pm = settings.payment_methods || {}
 
+  const planNames = {
+    'basic': 'HATCHLING',
+    'premium': 'HEN HOUSE',
+    'vip': 'GOLDEN FARM'
+  }
+  const displayName = planNames[plan.toLowerCase()] || plan.toUpperCase()
+
   const modal = document.createElement('div')
   modal.id = 'payment-modal'
   modal.className = 'auth-container' // reuse container style
@@ -686,7 +693,7 @@ window.purchaseSubscription = async function (plan, price) {
   modal.innerHTML = `
     <div class="auth-box" style="max-width: 500px; position: relative;">
       <button onclick="this.closest('#payment-modal').remove()" style="position: absolute; right: 20px; top: 20px; border: none; background: none; font-size: 24px; cursor: pointer;">&times;</button>
-      <h2 style="color: var(--primary-green);">Activate ${plan.toUpperCase()}</h2>
+      <h2 style="color: var(--primary-green);">Activate ${displayName}</h2>
       <p style="margin-bottom: 20px; text-align: center;">Please send <strong>₱${price}</strong> to any of the accounts below:</p>
       
       <div style="background: var(--light-gray); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
