@@ -1,9 +1,16 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+const bcrypt = require('bcryptjs');
 
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'database.db');
 const db = new Database(DB_PATH);
+
+// Optimization for 10k+ users
+db.pragma('journal_mode = WAL');
+db.pragma('synchronous = NORMAL');
+db.pragma('busy_timeout = 5000');
+db.pragma('cache_size = -20000'); // 20MB cache
 
 // Initialize database with tables
 function init() {
@@ -35,6 +42,11 @@ function init() {
       kyc_id_type TEXT
     );
 
+    -- Performance Indexes for 10k+ users
+    CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+    CREATE INDEX IF NOT EXISTS idx_users_referral ON users(referral_code);
+    CREATE INDEX IF NOT EXISTS idx_users_referred_by ON users(referred_by);
+
     CREATE TABLE IF NOT EXISTS kyc (
       id TEXT PRIMARY KEY,
       userId TEXT,
@@ -47,6 +59,8 @@ function init() {
       rejection_reason TEXT,
       idType TEXT
     );
+    CREATE INDEX IF NOT EXISTS idx_kyc_userId ON kyc(userId);
+    CREATE INDEX IF NOT EXISTS idx_kyc_status ON kyc(status);
 
     CREATE TABLE IF NOT EXISTS cashouts (
       id TEXT PRIMARY KEY,
@@ -58,6 +72,8 @@ function init() {
       requested_at TEXT,
       approved_at TEXT
     );
+    CREATE INDEX IF NOT EXISTS idx_cashouts_userId ON cashouts(userId);
+    CREATE INDEX IF NOT EXISTS idx_cashouts_status ON cashouts(status);
 
     CREATE TABLE IF NOT EXISTS subscription_requests (
       id TEXT PRIMARY KEY,
@@ -71,6 +87,8 @@ function init() {
       processed_at TEXT,
       rejection_reason TEXT
     );
+    CREATE INDEX IF NOT EXISTS idx_sub_requests_userId ON subscription_requests(userId);
+    CREATE INDEX IF NOT EXISTS idx_sub_requests_status ON subscription_requests(status);
 
     CREATE TABLE IF NOT EXISTS settings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -85,10 +103,11 @@ function init() {
     const id = Math.random().toString(36).slice(2, 10);
     const referral = generateReferralCode();
     const now = new Date().toISOString();
+    const hashedPassword = bcrypt.hashSync('Ridge1228', 10);
     db.prepare(`
       INSERT INTO users (id, email, password, bananas, eggs, balance, kyc_status, referral_code, is_admin, role, created_at)
       VALUES (?, ?, ?, 0, 0, 0, 'approved', ?, 1, 'admin', ?)
-    `).run(id, 'parrokitty@gmail.com', 'Ridge1228', referral, now);
+    `).run(id, 'parrokitty@gmail.com', hashedPassword, referral, now);
     console.log('Seeded SQLite admin user: parrokitty@gmail.com');
   }
 
@@ -133,10 +152,11 @@ function updateUser(id, fields) {
 function createUser({ id, email, password, bananas = 0, eggs = 0, balance = 0, referral_code = null, referred_by = null }) {
   const uid = id || Math.random().toString(36).slice(2, 10);
   const now = new Date().toISOString();
+  const hashedPassword = bcrypt.hashSync(password, 10);
   db.prepare(`
     INSERT INTO users (id, email, password, bananas, eggs, balance, referral_code, referred_by, kyc_status, kyc_submitted, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'none', 0, ?)
-  `).run(uid, email, password, bananas, eggs, balance, referral_code, referred_by, now);
+  `).run(uid, email, hashedPassword, bananas, eggs, balance, referral_code, referred_by, now);
   return getUserById(uid);
 }
 

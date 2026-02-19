@@ -16,6 +16,10 @@ export default defineConfig({
         secure: false
       }
     }
+  },
+  build: {
+    outDir: 'server/dist',
+    emptyOutDir: true
   }
 })
 

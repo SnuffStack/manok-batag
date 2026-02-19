@@ -5,11 +5,18 @@ import { showHomepage } from './js/homepage.js'
 document.addEventListener('DOMContentLoaded', () => {
   // Check if user is already logged in
   checkAuthState()
-  
+
   // Show homepage if not logged in
   const app = document.getElementById('app')
   if (!app.innerHTML.trim()) {
     showHomepage()
+  }
+
+  // Hide the initial loader once app is ready
+  const loader = document.getElementById('initial-loader')
+  if (loader) {
+    loader.style.opacity = '0'
+    setTimeout(() => loader.remove(), 500)
   }
 })
 

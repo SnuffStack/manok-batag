@@ -24,7 +24,8 @@ dist-ssr
 *.sw?
 
 # Database & Uploads
-server/data.json
+server/database.db
 server/uploads/
 server/debug.log
+server/dist/
 .env

@@ -178,20 +178,6 @@ window.showAdminSection = async function (section, event) {
   // Prevent default anchor navigation (if any)
   if (event && event.preventDefault) event.preventDefault()
 
-  // DEBUG: console + small banner to confirm clicks
-  try {
-    console.log('showAdminSection called:', section, event)
-    let debugBanner = document.getElementById('admin-debug-banner')
-    if (!debugBanner) {
-      debugBanner = document.createElement('div')
-      debugBanner.id = 'admin-debug-banner'
-      debugBanner.style.cssText = 'position:fixed;top:80px;right:20px;background:rgba(0,0,0,0.82);color:#fff;padding:8px 12px;border-radius:6px;z-index:3000;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,0.12)'
-      document.body.appendChild(debugBanner)
-    }
-    debugBanner.textContent = `Loading ${section}...`
-    setTimeout(() => { debugBanner.remove() }, 1400)
-  } catch (e) { console.warn('Debug banner failed', e) }
-
   // Update nav active state
   document.querySelectorAll('.admin-sidebar-nav a').forEach(a => a.classList.remove('active'))
   if (event && event.currentTarget) {
@@ -246,10 +232,12 @@ async function loadDashboard() {
     if (uResp.ok) {
       const b = await uResp.json()
       users = b.users || []
+      _cachedUsers = users // Sync cache
     }
     if (cResp.ok) {
       const b = await cResp.json()
       cashouts = b.items || []
+      _cachedCashouts = cashouts // Sync cache
     }
   } catch (e) {
     console.error('Stats load failed', e)
@@ -449,6 +437,7 @@ async function loadUsers() {
     if (resp.ok) {
       const body = await resp.json()
       allUsers = body.users || []
+      _cachedUsers = allUsers // Sync cache
     }
   } catch (e) {
     console.error('Failed to load users', e)
@@ -1339,7 +1328,7 @@ function openEditUserModal(userId) {
   }, 50)
 }
 
-function saveEditUser(userId) {
+async function saveEditUser(userId) {
   const users = loadUsersData()
   const u = users.find(x => x.id === userId)
   if (!u) return openAdminModal({ title: 'User not found', body: '<p>User not found.</p>', footer: '<button class="btn-primary" onclick="closeAdminModal()">Close</button>' })
@@ -1360,17 +1349,36 @@ function saveEditUser(userId) {
   // clear errors
   if (errorEl) { errorEl.textContent = ''; errorEl.style.display = 'none' }
 
-  u.email = email
-  u.bananas = bananas
-  u.eggs = eggs
-  u.balance = balance
-  u.subscription = subscription
-  u.referral_code = referral_code
-  saveUsersData(users)
-  updateSidebarCounts()
-  closeAdminModal()
-  showToast('User updated successfully', 'success')
-  loadUsers()
+  try {
+    const resp = await fetch(`/api/users/${u.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        bananas,
+        eggs,
+        balance,
+        subscription,
+        referral_code
+      })
+    })
+
+    if (!resp.ok) {
+      const body = await resp.json()
+      throw new Error(body.error || 'Failed to update user')
+    }
+
+    showToast('User updated successfully', 'success')
+    closeAdminModal()
+    loadUsers()
+    updateSidebarCounts()
+  } catch (e) {
+    console.error('Update user error:', e)
+    if (errorEl) {
+      errorEl.textContent = e.message
+      errorEl.style.display = 'block'
+    }
+  }
 }
 
 // --- NEW: current user helpers ---

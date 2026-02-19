@@ -18,6 +18,7 @@
   --black: #333333;
   --gray: #757575;
   --light-gray: #F5F5F5;
+  --hero-gradient: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
 }
 
 html,
@@ -34,6 +35,7 @@ body {
   font-family: 'Comic Sans MS', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   color: var(--black);
   overflow-x: hidden;
+  scroll-behavior: smooth;
 }
 
 
@@ -1622,23 +1624,76 @@ body {
   font-weight: 900;
   margin-bottom: 20px;
   line-height: 1;
-  color: #FFD700;
+  background: var(--hero-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
   text-transform: uppercase;
-  text-shadow:
-    0 1px 0 #333,
-    0 2px 0 #333,
-    0 3px 0 #333,
-    0 4px 0 #333,
-    0 5px 0 #333,
-    0 6px 1px rgba(0, 0, 0, .1),
-    0 0 5px rgba(0, 0, 0, .1),
-    0 1px 3px rgba(0, 0, 0, .3),
-    0 3px 5px rgba(0, 0, 0, .2),
-    0 5px 10px rgba(0, 0, 0, .25),
-    0 10px 10px rgba(0, 0, 0, .2),
-    0 20px 20px rgba(0, 0, 0, .15);
-  letter-spacing: -2px;
-  animation: title-entrance 1.2s cubic-bezier(0.23, 1, 0.32, 1) both;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+  animation: title-pop 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.hero-description {
+  font-size: 1.4rem;
+  color: #555;
+  max-width: 700px;
+  margin: 0 auto 40px auto;
+  line-height: 1.6;
+}
+
+.chicken-hero-img {
+  width: 100%;
+  max-width: 500px;
+  height: auto;
+  filter: drop-shadow(0 15px 35px rgba(0, 0, 0, 0.15));
+  animation: float-breathe 4s ease-in-out infinite;
+}
+
+.hero-title {
+  font-size: clamp(3rem, 10vw, 6rem);
+  font-weight: 900;
+  margin-bottom: 20px;
+  line-height: 1;
+  background: var(--hero-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-transform: uppercase;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+  animation: title-pop 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.hero-description {
+  font-size: 1.4rem;
+  color: #555;
+  max-width: 700px;
+  margin: 0 auto 40px auto;
+  line-height: 1.6;
+}
+
+.chicken-hero-img {
+  width: 100%;
+  max-width: 500px;
+  height: auto;
+  filter: drop-shadow(0 15px 35px rgba(0, 0, 0, 0.15));
+  animation: float-breathe 4s ease-in-out infinite;
+}
+
+@keyframes title-pop {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.hero-buttons {
+  position: relative;
+  z-index: 10;
 }
 
 @keyframes title-entrance {

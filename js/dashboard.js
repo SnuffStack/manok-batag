@@ -487,15 +487,6 @@ window.feedChicken = async function () {
   feedBtn.disabled = true
   statusDiv.textContent = 'Feeding chicken...'
 
-  chicken.classList.add('eating')
-  playSound('feed') // Play eating/chicken sound
-
-  // Wait for animation
-  await new Promise(resolve => setTimeout(resolve, 1500))
-
-  // Egg laying animation
-  chicken.classList.remove('eating')
-  chicken.classList.add('laying')
   playSound('lay') // Play lay sound
 
   const egg = document.createElement('div')
@@ -544,7 +535,7 @@ window.feedChicken = async function () {
       eggIcon.remove()
     }, 1500)
 
-    // Update UI with a small delay for animation sync
+    // Update UI almost immediately
     setTimeout(() => {
       document.getElementById('banana-count').textContent = userData.bananas
       document.getElementById('egg-count').textContent = userData.eggs
@@ -554,15 +545,15 @@ window.feedChicken = async function () {
       eggValue.classList.add('pulse-highlight')
       setTimeout(() => eggValue.classList.remove('pulse-highlight'), 500)
 
-      chicken.classList.remove('laying')
+      // chicken.classList.remove('laying') // Cleanup
       statusDiv.textContent = 'Chicken laid an egg! Sell eggs to increase balance.'
       updateBananaDisplay()
-    }, 1000)
+    }, 200)
 
     setTimeout(() => {
       statusDiv.textContent = 'Ready to feed! Feed 2 bananas to get 1 egg.'
       feedBtn.disabled = false
-    }, 3000)
+    }, 800)
 
   } catch (error) {
     console.error('Feed error:', error)

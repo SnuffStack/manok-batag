@@ -15,7 +15,10 @@ export async function checkAuthState() {
   // Initialize from existing local session if present
   try {
     const localCur = JSON.parse(localStorage.getItem('local_current_user') || 'null')
-    if (localCur) currentUser = localCur
+    if (localCur) {
+      currentUser = localCur
+      loadUserData()
+    }
   } catch (e) { /* ignore */ }
 }
 

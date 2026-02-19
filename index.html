@@ -1,16 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chicken Banana - Farm & Earn</title>
-    <link rel="stylesheet" href="/style.css" />
-    <link rel="stylesheet" href="/css/auth.css" />
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/main.js"></script>
-  </body>
-</html>
 
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#4CAF50" />
+
+  <title>Chicken Banana - Hatch, Feed & Earn</title>
+  <meta name="description"
+    content="Welcome to Chicken Banana, the ultimate gamified farm experience. Hatch chickens, feed them bananas, and collect eggs to earn rewards!" />
+  <meta name="keywords" content="chicken banana, play to earn, farm game, crypto game, gamified earning" />
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Chicken Banana - Hatch, Feed & Earn" />
+  <meta property="og:description"
+    content="The most engaging gamified farm experience. Join now and start your farming journey!" />
+  <meta property="og:image" content="/chicken.png" />
+
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/css/auth.css" />
+</head>
+
+<body>
+  <!-- Initial Loading Screen -->
+  <div id="initial-loader"
+    style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.5s ease;">
+    <img src="/chicken.png" alt="Loading..." style="width: 100px; height: 100px; animation: bounce 1s infinite;" />
+    <h2 style="color: #4CAF50; margin-top: 20px; font-family: sans-serif;">Chicken Banana</h2>
+    <p style="color: #666; font-family: sans-serif;">Feeding the chickens...</p>
+  </div>
+
+  <style>
+    @keyframes bounce {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-20px);
+      }
+    }
+  </style>
+
+  <div id="app"></div>
+  <script type="module" src="/main.js"></script>
+</body>
+
+</html>
