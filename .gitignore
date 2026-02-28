@@ -25,6 +25,8 @@ dist-ssr
 
 # Database & Uploads
 server/database.db
+server/database.db-shm
+server/database.db-wal
 server/uploads/
 server/debug.log
 server/dist/
