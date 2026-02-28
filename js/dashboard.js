@@ -964,36 +964,46 @@ window.loadBananaHistory = async function () {
   `
   document.body.appendChild(modal)
 
+  const histContent = document.getElementById('banana-history-content')
+
   try {
+    if (!userData || !userData.id) throw new Error('User data not found. Please refresh.')
+
     const resp = await fetch(`/api/bananas/history/${userData.id}`)
     if (!resp.ok) throw new Error('Failed to load history')
-    const { items } = await resp.json()
 
-    const positiveItems = items.filter(i => i.amount > 0)
+    const data = await resp.json()
+    const items = data.items || []
 
-    const content = document.getElementById('banana-history-content')
+    const positiveItems = items.filter(i => i && i.amount > 0)
+
     if (positiveItems.length === 0) {
-      content.innerHTML = '<p style="text-align:center;color:#999;padding:20px;">No rewards history yet.</p>'
+      if (histContent) histContent.innerHTML = '<p style="text-align:center;color:#999;padding:20px;">No rewards history yet.</p>'
       return
     }
 
-    content.innerHTML = `
-      <div style="display:flex; flex-direction:column; gap:10px;">
-        ${positiveItems.map(i => `
-          <div style="background:#f1fcf4; padding:12px; border-radius:12px; display:flex; justify-content:space-between; align-items:center;">
-            <div>
-              <div style="font-weight:700; color:#333;">${i.reason}</div>
-              <div style="font-size:11px; color:#999;">${new Date(i.created_at).toLocaleString()}</div>
+    if (histContent) {
+      histContent.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          ${positiveItems.map(i => `
+            <div style="background:#f1fcf4; padding:12px; border-radius:12px; display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div style="font-weight:700; color:#333;">${i.reason || 'Reward'}</div>
+                <div style="font-size:11px; color:#999;">${i.created_at ? new Date(i.created_at).toLocaleString() : 'N/A'}</div>
+              </div>
+              <div style="font-weight:800; color:#2e7d32; font-size:1.1rem;">
+                +${i.amount} 🍌
+              </div>
             </div>
-            <div style="font-weight:800; color:#2e7d32; font-size:1.1rem;">
-              +${i.amount} 🍌
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    `
+          `).join('')}
+        </div>
+      `
+    }
   } catch (e) {
-    document.getElementById('banana-history-content').innerHTML = `<div class="alert alert-error">${e.message}</div>`
+    console.error('Banana history error:', e)
+    if (histContent) {
+      histContent.innerHTML = `<div class="alert alert-error">${e.message || 'Error loading history'}</div>`
+    }
   }
 }
 
