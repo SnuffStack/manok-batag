@@ -370,6 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadUserData()
 })
 
+window.loadUserData = loadUserData
 export async function loadUserData() {
   const messageDiv = document.getElementById('message')
 
@@ -495,7 +496,7 @@ export function showKYCPage(userData) {
           <div id="kyc-message"></div>
         </form>
         <div style="margin-top:20px; text-align:center;">
-          <a onclick="goToLandingPage()" style="cursor:pointer; color:var(--gray);">Skip for now (Limited Access)</a>
+          <button type="button" class="btn btn-secondary" style="width:100%; border-radius:12px; padding:12px; font-weight:700;" onclick="loadUserData()">Go back to Dashboard</button>
         </div>
       </div>
     </div>

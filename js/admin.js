@@ -1,6 +1,5 @@
-// Supabase integration removed — use local DB or scripts instead.
-// For development enable admin with:
-//   localStorage.setItem('local_is_admin','true')
+// Helper to escape strings for inline onclick attributes (handles quotes and newlines)
+const esc = (s) => (String(s || '')).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, "\\n").replace(/\r/g, "");
 
 // Wrap previous isAdmin call with a robust fallback to support server and local modes
 const formatPlanName = (plan) => {
@@ -529,14 +528,16 @@ async function loadUsers() {
               </div>
             </div>
             <div class="user-right-info">
-              <div class="user-assets">
-                <div class="asset">🍌 ${user.bananas || 0}</div>
-                <div class="asset balance">₱${formatMoney(user.balance)}</div> 
+              <div class="user-info-row">
+                <div class="user-assets">
+                  <div class="asset"><span>🍌</span> ${user.bananas || 0}</div>
+                  <div class="asset balance">₱${formatMoney(user.balance)}</div> 
+                </div>
+                <div class="user-status"><span class="status-badge ${user.kyc_status || 'pending'}">${user.kyc_status || 'pending'}</span></div>
               </div>
-              <div class="user-status"><span class="status-badge ${user.kyc_status || 'pending'}">${user.kyc_status || 'pending'}</span></div>
               <div class="user-actions">
-                <button class="btn btn-info btn-sm" onclick="event.stopPropagation(); showUserDetails('${user.id}')">View</button>
-                <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); confirmDeleteUser('${user.id}')">Delete</button>
+                <button class="btn btn-info btn-sm" onclick="event.stopPropagation(); showUserDetails('${user.id}')">VIEW</button>
+                <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); confirmDeleteUser('${user.id}')">DELETE</button>
               </div>
             </div>
           </div>
@@ -619,10 +620,10 @@ async function loadKYCPending() {
                 <div class="kyc-meta">
                   <div class="user-email">${display}</div>
                   <div class="user-sub">${k.idType || (u && u.kyc_id_type) || 'ID Document'} • ${k.submitted_at ? new Date(k.submitted_at).toLocaleDateString() : ''}</div>
-                  <div class="kyc-details-grid" style="font-size: 11px; color: var(--gray); margin-top: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                  <div class="kyc-details-grid">
                     <div><strong>Name:</strong> ${k.first_name || ''} ${k.last_name || ''}</div>
                     <div><strong>ID #:</strong> ${k.idNumber || 'N/A'}</div>
-                    <div style="grid-column: span 2;"><strong>Address:</strong> ${k.address || 'N/A'}</div>
+                    <div class="kyc-address"><strong>Address:</strong> ${k.address || 'N/A'}</div>
                     <div><strong>Birthdate:</strong> ${k.birthdate || 'N/A'}</div>
                   </div>
                 </div>
@@ -630,7 +631,7 @@ async function loadKYCPending() {
               <div class="kyc-actions">
                 <button type="button" class="btn btn-success" onclick="event.preventDefault(); approveKYC('${k.userId}', '${k.id}')">Approve</button>
                 <button type="button" class="btn btn-danger" onclick="event.preventDefault(); rejectKYC('${k.userId}', '${k.id}')">Reject</button>
-                ${viewUrl ? `<button type="button" class="btn btn-info" onclick="event.preventDefault(); previewKycDocument('${viewUrl}', '${display.replace(/'/g, "\\'")}')">View ID</button>` : ''}
+                ${viewUrl ? `<button type="button" class="btn btn-info" onclick="event.preventDefault(); previewKycDocument('${viewUrl}', '${esc(display)}', { first_name: '${esc(k.first_name)}', last_name: '${esc(k.last_name)}', idNumber: '${esc(k.idNumber)}', address: '${esc(k.address)}', birthdate: '${esc(k.birthdate)}', idType: '${esc(k.idType)}' })">View ID</button>` : ''}
                 <button type="button" class="btn btn-danger btn-outline btn-xs" onclick="deleteKYCRequest('${k.id}')" style="margin-left:auto;">Delete Request</button>
               </div>
             </div>
@@ -685,7 +686,6 @@ async function loadKYCHistory() {
       <div class="panel-card">
         <div class="panel-header">
           <div style="display:flex; align-items:center; gap:12px;">
-            <button class="btn btn-secondary btn-sm" onclick="loadKYCPending()">← Back</button>
             <h2>KYC History</h2>
           </div>
         </div>
@@ -715,7 +715,7 @@ async function loadKYCHistory() {
                         <td>${new Date(k.submitted_at || k.requested_at).toLocaleDateString()}</td>
                         <td>
                           <div style="display:flex; gap:4px;">
-                            ${viewUrl ? `<button class="btn btn-xs btn-info" onclick="previewKycDocument('${viewUrl}', '${email.replace(/'/g, "\\'")}')">View</button>` : ''}
+                            ${viewUrl ? `<button class="btn btn-xs btn-info" onclick="previewKycDocument('${viewUrl}', '${esc(email)}', { first_name: '${esc(k.first_name)}', last_name: '${esc(k.last_name)}', idNumber: '${esc(k.idNumber)}', address: '${esc(k.address)}', birthdate: '${esc(k.birthdate)}', idType: '${esc(k.idType)}' })">View</button>` : ''}
                             <button class="btn btn-xs btn-danger" onclick="deleteKYCRequest('${k.id}')">Delete</button>
                           </div>
                         </td>
@@ -774,7 +774,7 @@ async function loadCashouts() {
           <div>USER</div>
           <div>METHOD</div>
           <div>AMOUNT</div>
-          <div>STATUS</div>
+          <div>ACTIONS</div>
         </div>
         ${cashouts.map(c => `
           <div class="cashout-row">
@@ -813,7 +813,6 @@ async function loadCashoutHistory() {
       <div class="panel-card">
         <div class="panel-header">
           <div style="display:flex; align-items:center; gap:12px;">
-            <button class="btn btn-secondary btn-sm" onclick="loadCashouts()">← Back</button>
             <h2>Approved Cashouts</h2>
           </div>
         </div>
@@ -1001,7 +1000,6 @@ async function loadSubscriptionHistory() {
       <div class="panel-card">
         <div class="panel-header">
            <div style="display:flex; align-items:center; gap:12px;">
-            <button class="btn btn-secondary btn-sm" onclick="loadSubscriptions()">← Back</button>
             <h2>Subscription History</h2>
           </div>
         </div>
@@ -1434,26 +1432,43 @@ function closeAdminModal() {
 }
 
 // Preview KYC document in a modal
-function previewKycDocument(url, email) {
-  console.log('previewKycDocument called with:', { url, email });
+// Preview KYC document in a modal with user details
+function previewKycDocument(url, email, details = {}) {
+  console.log('previewKycDocument called with:', { url, email, details });
   const isImage = /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(url)
   const isPdf = /\.pdf$/i.test(url)
 
-  let bodyContent = ''
+  let detailsHtml = ''
+  if (details && (details.first_name || details.idNumber)) {
+    detailsHtml = `
+      <div class="kyc-preview-details" style="margin-bottom:20px; padding:15px; background:#f8f9fa; border-radius:12px; border:1px solid #eef2f5; text-align:left;">
+        <h4 style="margin:0 0 12px 0; color:var(--primary); font-size:14px; text-transform:uppercase; letter-spacing:0.5px;">User Information</h4>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; font-size:13px;">
+          <div><strong style="color:var(--gray)">FULL NAME:</strong><div style="font-weight:700; color:#333;">${details.first_name || ''} ${details.last_name || ''}</div></div>
+          <div><strong style="color:var(--gray)">ID NUMBER:</strong><div style="font-weight:700; color:#333;">${details.idNumber || 'N/A'}</div></div>
+          <div><strong style="color:var(--gray)">BIRTHDATE:</strong><div style="font-weight:700; color:#333;">${details.birthdate || 'N/A'}</div></div>
+          <div><strong style="color:var(--gray)">ID TYPE:</strong><div style="font-weight:700; color:#333; text-transform:capitalize;">${details.idType || 'N/A'}</div></div>
+          <div style="grid-column: span 2;"><strong style="color:var(--gray)">ADDRESS:</strong><div style="font-weight:700; color:#333;">${details.address || 'N/A'}</div></div>
+        </div>
+      </div>
+    `
+  }
+
+  let bodyContent = detailsHtml
   if (isImage) {
-    bodyContent = `
-      <div style="text-align:center;max-height:70vh;overflow:auto">
-        <img src="${url}" alt="KYC Document" style="max-width:100%;max-height:65vh;border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,0.15)" onerror="console.error('Image load failed:', this.src); this.parentElement.innerHTML='<p style=\\'color:#C62828;padding:40px\\'>Failed to load image. The file may not exist or is not accessible.</p>'" />
+    bodyContent += `
+      <div style="text-align:center;max-height:60vh;overflow:auto">
+        <img src="${url}" alt="KYC Document" style="max-width:100%;max-height:55vh;border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,0.15)" onerror="console.error('Image load failed:', this.src); this.parentElement.innerHTML='<p style=\\'color:#C62828;padding:40px\\'>Failed to load image. The file may not exist or is not accessible.</p>'" />
       </div>
     `
   } else if (isPdf) {
-    bodyContent = `
+    bodyContent += `
       <div style="text-align:center">
-        <iframe src="${url}" style="width:100%;height:65vh;border:none;border-radius:8px"></iframe>
+        <iframe src="${url}" style="width:100%;height:60vh;border:none;border-radius:8px"></iframe>
       </div>
     `
   } else {
-    bodyContent = `
+    bodyContent += `
       <div style="text-align:center;padding:50px 20px">
         <div style="font-size:48px;margin-bottom:15px;opacity:0.6">📎</div>
         <p style="margin-bottom:25px;color:#666;font-weight:500">This file type (${url.split('.').pop().toUpperCase()}) cannot be previewed directly.</p>
@@ -1464,11 +1479,11 @@ function previewKycDocument(url, email) {
 
   try {
     openAdminModal({
-      title: `KYC Document - ${email || 'Preview'}`,
+      title: `KYC Review - ${email || 'Preview'}`,
       body: bodyContent,
       footer: `
-        <button type="button" class="btn btn-secondary" onclick="closeAdminModal()">Close</button> 
-        <a href="${url}" target="_blank" class="btn btn-info" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center">Open in New Tab</a>
+        <button type="button" class="btn btn-secondary" style="border-radius:8px" onclick="closeAdminModal()">Close</button> 
+        <a href="${url}" target="_blank" class="btn btn-info" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;border-radius:8px">Open in New Tab</a>
       `,
       large: true
     })
@@ -1541,36 +1556,44 @@ function openEditUserModal(userId) {
   const u = users.find(x => x.id === userId)
   if (!u) return openAdminModal({ title: 'User not found', body: '<p>User not found.</p>', footer: '<button class="btn-primary" onclick="closeAdminModal()">Close</button>' })
 
-
   const body = `
-    <form id="edit-user-form" onsubmit="event.preventDefault(); saveEditUser('${u.id}');">
-      <div style="display:flex;gap:12px;flex-wrap:wrap">
-        <div style="flex:1;min-width:220px">
+    <form id="edit-user-form" class="admin-edit-form" onsubmit="event.preventDefault(); saveEditUser('${u.id}');">
+      <div class="form-row">
+        <div class="form-group flex-2">
           <label>Email</label>
-          <input id="edit-email" aria-label="Email" value="${u.email}" />
+          <input id="edit-email" type="text" value="${u.email}" required />
         </div>
-        <div style="width:140px">
+        <div class="form-group flex-1">
           <label>Bananas</label>
-          <input id="edit-bananas" type="number" aria-label="Bananas" value="${u.bananas || 0}" />
-        </div>
-        <div style="width:140px">
-          <label>Eggs</label>
-          <input id="edit-eggs" type="number" aria-label="Eggs" value="${u.eggs || 0}" />
-        </div>
-        <div style="width:160px">
-          <label>Balance</label>
-          <input id="edit-balance" type="number" step="0.01" aria-label="Balance" value="${u.balance || 0}" />
+          <input id="edit-bananas" type="number" value="${u.bananas || 0}" />
         </div>
       </div>
-      <label>Subscription</label>
-      <input id="edit-subscription" value="${u.subscription || 'None'}" />
-      <label>Referral code</label>
-      <input id="edit-referral" value="${u.referral_code || ''}" />
-      <div id="edit-user-error" style="color:#C62828;font-weight:600;margin-top:6px;display:none" role="alert"></div>
+      <div class="form-row">
+        <div class="form-group flex-1">
+          <label>Eggs</label>
+          <input id="edit-eggs" type="number" value="${u.eggs || 0}" />
+        </div>
+        <div class="form-group flex-1">
+          <label>Balance</label>
+          <input id="edit-balance" type="number" step="0.01" value="${u.balance || 0}" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Subscription</label>
+        <input id="edit-subscription" value="${u.subscription || 'None'}" />
+      </div>
+      <div class="form-group">
+        <label>Referral code</label>
+        <input id="edit-referral" value="${u.referral_code || ''}" />
+      </div>
+      <div id="edit-user-error" class="error-message" style="display:none"></div>
     </form>
   `
-  const footer = `<button class="btn-secondary" onclick="closeAdminModal()">Cancel</button> <button class="btn-primary" onclick="saveEditUser('${u.id}')">Save</button>`
-  openAdminModal({ title: 'Edit User', body, footer, large: true })
+  const footer = `
+    <button type="button" class="btn btn-secondary" onclick="closeAdminModal()">Cancel</button> 
+    <button type="button" class="btn btn-success" onclick="saveEditUser('${u.id}')">Save</button>
+  `
+  openAdminModal({ title: 'Edit User', body, footer, large: false })
   setTimeout(() => {
     const el = document.getElementById('edit-email')
     if (el) el.focus()
@@ -1590,9 +1613,7 @@ async function saveEditUser(userId) {
   if (referral_code) referral_code = referral_code.toUpperCase()
 
   const errorEl = document.getElementById('edit-user-error')
-  const emailRegex = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
-  if (!email) { if (errorEl) { errorEl.textContent = 'Email is required.'; errorEl.style.display = 'block' } return }
-  if (!emailRegex.test(email)) { if (errorEl) { errorEl.textContent = 'Invalid email address.'; errorEl.style.display = 'block' } return }
+  if (!email) { if (errorEl) { errorEl.textContent = 'User identifier (Email/Phone) is required.'; errorEl.style.display = 'block' } return }
   if (balance < 0) { if (errorEl) { errorEl.textContent = 'Balance cannot be negative.'; errorEl.style.display = 'block' } return }
 
   // clear errors

@@ -1,4 +1,4 @@
-import { getCurrentUser, logout } from './auth.js'
+import { getCurrentUser, logout, showKYCPage } from './auth.js'
 
 let userData = null
 
@@ -260,14 +260,9 @@ async function checkSubscriptionRequests() {
   } catch (e) { console.log('Req check fail', e) }
 }
 
-window.showKYCPage = async function (user) {
-  const { showKYCPage } = await import('./auth.js')
-  showKYCPage(user)
-}
-
 window.triggerKYCVerify = function (e) {
   if (e) e.stopPropagation();
-  window.showKYCPage(userData)
+  showKYCPage(userData)
 }
 
 window.toggleSub = function (el) {
@@ -947,24 +942,7 @@ async function checkDailyBananas() {
   }
 }
 
-window.copyUserReferralLink = function () {
-  const linkInput = document.getElementById('referral-link')
-  const btnText = document.getElementById('copy-text')
-
-  linkInput.select()
-  linkInput.setSelectionRange(0, 99999) // For mobile devices
-
-  try {
-    navigator.clipboard.writeText(linkInput.value)
-    const originalText = btnText.textContent
-    btnText.textContent = 'Copied! ✅'
-    setTimeout(() => {
-      btnText.textContent = originalText
-    }, 2000)
-  } catch (err) {
-    console.error('Failed to copy link', err)
-  }
-}
+// (Removing duplicate copyUserReferralLink here, using the more complete one at line 624)
 
 window.handleLogout = async function () {
   await logout()
@@ -993,6 +971,7 @@ window.loadBananaHistory = async function () {
 
     const positiveItems = items.filter(i => i.amount > 0)
 
+    const content = document.getElementById('banana-history-content')
     if (positiveItems.length === 0) {
       content.innerHTML = '<p style="text-align:center;color:#999;padding:20px;">No rewards history yet.</p>'
       return

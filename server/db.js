@@ -165,7 +165,7 @@ function updateUser(id, fields) {
   return getUserById(id);
 }
 
-function createUser({ id, email, password, bananas = 0, eggs = 0, balance = 0, referral_code = null, referred_by = null }) {
+function createUser({ id, email, password, bananas = 1, eggs = 0, balance = 0, referral_code = null, referred_by = null }) {
   const uid = id || Math.random().toString(36).slice(2, 10);
   const now = new Date().toISOString();
   const hashedPassword = bcrypt.hashSync(password, 10);
@@ -173,6 +173,10 @@ function createUser({ id, email, password, bananas = 0, eggs = 0, balance = 0, r
     INSERT INTO users (id, email, password, bananas, eggs, balance, referral_code, referred_by, kyc_status, kyc_submitted, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'none', 0, ?)
   `).run(uid, email, hashedPassword, bananas, eggs, balance, referral_code, referred_by, now);
+
+  // Log the signup reward
+  logBanana(uid, bananas, 'New User Signup Reward', 'reward');
+
   return getUserById(uid);
 }
 
@@ -295,6 +299,25 @@ function getKycByUser(userId) {
   return db.prepare('SELECT * FROM kyc WHERE userId = ? ORDER BY submitted_at DESC LIMIT 1').get(userId);
 }
 
+function getKycByIdNumber(idNumber) {
+  if (!idNumber) return null;
+  return db.prepare("SELECT * FROM kyc WHERE idNumber = ? AND status != 'rejected' ORDER BY submitted_at DESC LIMIT 1").get(idNumber);
+}
+
+function checkDuplicateKyc(idNumber, firstName, lastName, birthdate) {
+  // Check by ID Number
+  if (idNumber) {
+    const existing = db.prepare("SELECT * FROM kyc WHERE idNumber = ? AND status != 'rejected'").get(idNumber);
+    if (existing) return { duplicate: true, reason: 'ID Number already used' };
+  }
+  // Check by Name + Birthdate
+  if (firstName && lastName && birthdate) {
+    const existing = db.prepare("SELECT * FROM kyc WHERE LOWER(first_name) = ? AND LOWER(last_name) = ? AND birthdate = ? AND status != 'rejected'").get(firstName.toLowerCase(), lastName.toLowerCase(), birthdate);
+    if (existing) return { duplicate: true, reason: 'Identity already verified' };
+  }
+  return { duplicate: false };
+}
+
 function logBanana(userId, amount, reason, type) {
   const bid = Math.random().toString(36).slice(2, 10);
   const now = new Date().toISOString();
@@ -313,9 +336,16 @@ function updateKycStatus(id, status, reason) {
       WHERE id = ? OR LOWER(email) = ?
     `).run(now, k.userId, k.userId.toLowerCase());
 
-    // NEW Logic: 1 banana upon approval
+    // Logic: 1 banana for approved user (as implemented)
     db.prepare('UPDATE users SET bananas = bananas + 1 WHERE id = ?').run(k.userId);
     logBanana(k.userId, 1, 'KYC Approved Reward', 'reward');
+
+    // NEW Referral Logic: 1 banana for referrer
+    const targetUser = getUserById(k.userId);
+    if (targetUser && targetUser.referred_by) {
+      db.prepare('UPDATE users SET bananas = bananas + 1 WHERE id = ?').run(targetUser.referred_by);
+      logBanana(targetUser.referred_by, 1, 'Friend KYC Approved Reward', 'referral');
+    }
 
   } else if (status === 'rejected') {
     db.prepare("UPDATE kyc SET status = 'rejected', rejected_at = ?, rejection_reason = ? WHERE id = ?").run(now, reason, id);
@@ -544,6 +574,8 @@ module.exports = {
   getPendingKyc,
   getAllKyc,
   getKycByUser,
+  getKycByIdNumber,
+  checkDuplicateKyc,
   updateKycStatus,
   feedChicken,
   claimDailyBonus,

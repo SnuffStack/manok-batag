@@ -27,11 +27,17 @@ try {
         'ALTER TABLE users ADD COLUMN payment_name TEXT',
         'ALTER TABLE users ADD COLUMN eggs_today INTEGER DEFAULT 0',
         'ALTER TABLE users ADD COLUMN last_egg_date TEXT',
+        'ALTER TABLE users ADD COLUMN kyc_approved_at TEXT',
+        'ALTER TABLE users ADD COLUMN kyc_rejection_reason TEXT',
+        'ALTER TABLE users ADD COLUMN kyc_document_url TEXT',
+        'ALTER TABLE users ADD COLUMN kyc_id_type TEXT',
         // KYC table additions
         'ALTER TABLE kyc ADD COLUMN first_name TEXT',
         'ALTER TABLE kyc ADD COLUMN last_name TEXT',
         'ALTER TABLE kyc ADD COLUMN address TEXT',
         'ALTER TABLE kyc ADD COLUMN birthdate TEXT',
+        'ALTER TABLE kyc ADD COLUMN idNumber TEXT',
+        'ALTER TABLE kyc ADD COLUMN idType TEXT',
         // Subscription requests additions
         'ALTER TABLE subscription_requests ADD COLUMN receipt_url TEXT'
     ];
@@ -209,6 +215,12 @@ app.post('/api/kyc', upload.single('file'), (req, res) => {
         const file = req.file;
         const filename = file ? file.filename : null;
         const filepath = file ? 'uploads/' + file.filename : null;
+
+        // Check for duplicate identity
+        const dup = db.checkDuplicateKyc(idNumber, first_name, last_name, birthdate);
+        if (dup.duplicate) {
+            return res.status(409).json({ error: dup.reason });
+        }
 
         const kyc = db.createKyc({
             userId,
