@@ -202,6 +202,7 @@ export async function showDashboard(data) {
               </div>
           </div>
         </div>
+
       </main>
 
       <footer class="dashboard-footer">
@@ -578,8 +579,8 @@ window.feedChicken = async function () {
 // Interactive Helpers
 let isMuted = JSON.parse(localStorage.getItem('chicken_muted') || 'false')
 const sounds = {
-  feed: new Audio('assets/sounds/chicken-sound.mp3'),
-  lay: new Audio('assets/sounds/lay-eggs-sound.mp3')
+  feed: new Audio('/assets/sounds/chicken-sound.mp3'),
+  lay: new Audio('/assets/sounds/lay-eggs-sound.mp3')
 }
 
 // Preload
@@ -594,55 +595,6 @@ function playSound(type) {
   if (sound) {
     sound.currentTime = 0
     sound.play().catch(e => console.log('Audio play failed', e))
-  }
-}
-
-window.openBananaHistory = async function() {
-  const modalBody = `
-    <div id="banana-history-modal" class="history-list">
-      <div class="skeleton-loader"></div>
-    </div>
-  `
-  
-  // Use a generic modal helper if available, or just alert/simple modal
-  // Assuming there is an openModal system or similar
-  // Let's create a simple modal overlay
-  const overlay = document.createElement('div')
-  overlay.className = 'modal-overlay'
-  overlay.innerHTML = `
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3>🍌 Banana History</h3>
-        <button onclick="this.closest('.modal-overlay').remove()">✕</button>
-      </div>
-      <div class="modal-body" id="banana-history-list">
-        <div class="loading">Loading history...</div>
-      </div>
-    </div>
-  `
-  document.body.appendChild(overlay)
-  
-  try {
-    const resp = await fetch('/api/bananas/history/' + userData.id)
-    const { items } = await resp.json()
-    const list = document.getElementById('banana-history-list')
-    
-    if (!items || items.length === 0) {
-      list.innerHTML = '<p style="text-align:center; color:gray; padding:20px;">No history yet.</p>'
-      return
-    }
-    
-    list.innerHTML = items.map(h => `
-      <div class="history-item" style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #eee;">
-        <div>
-          <div style="font-weight:700;">${h.reason || 'Bonus'}</div>
-          <div style="font-size:11px; color:gray;">${new Date(h.created_at).toLocaleString()}</div>
-        </div>
-        <div style="color:var(--primary); font-weight:800;">+${h.amount} 🍌</div>
-      </div>
-    `).join('')
-  } catch (e) {
-    document.getElementById('banana-history-list').innerHTML = '<p>Error loading history.</p>'
   }
 }
 
@@ -1039,22 +991,23 @@ window.loadBananaHistory = async function () {
     if (!resp.ok) throw new Error('Failed to load history')
     const { items } = await resp.json()
 
-    const content = document.getElementById('banana-history-content')
-    if (items.length === 0) {
-      content.innerHTML = '<p style="text-align:center;color:#999;padding:20px;">No history yet.</p>'
+    const positiveItems = items.filter(i => i.amount > 0)
+
+    if (positiveItems.length === 0) {
+      content.innerHTML = '<p style="text-align:center;color:#999;padding:20px;">No rewards history yet.</p>'
       return
     }
 
     content.innerHTML = `
       <div style="display:flex; flex-direction:column; gap:10px;">
-        ${items.map(i => `
+        ${positiveItems.map(i => `
           <div style="background:#f1fcf4; padding:12px; border-radius:12px; display:flex; justify-content:space-between; align-items:center;">
             <div>
               <div style="font-weight:700; color:#333;">${i.reason}</div>
               <div style="font-size:11px; color:#999;">${new Date(i.created_at).toLocaleString()}</div>
             </div>
-            <div style="font-weight:800; color:${i.amount > 0 ? '#2e7d32' : '#c62828'}; font-size:1.1rem;">
-              ${i.amount > 0 ? '+' : ''}${i.amount} 🍌
+            <div style="font-weight:800; color:#2e7d32; font-size:1.1rem;">
+              +${i.amount} 🍌
             </div>
           </div>
         `).join('')}
@@ -1065,3 +1018,8 @@ window.loadBananaHistory = async function () {
   }
 }
 
+window.toggleMute = function () {
+  isMuted = !isMuted
+  localStorage.setItem('chicken_muted', isMuted)
+  updateMuteIcon()
+}

@@ -810,6 +810,30 @@ body {
   }
 }
 
+/* Chicken feeding animations */
+#chicken.eating img {
+  animation: peck 0.35s ease-in-out 2, float-breathe 4s ease-in-out infinite 0.7s !important;
+}
+
+#chicken.laying img {
+  animation: bounce-lay 0.5s ease-in-out, float-breathe 4s ease-in-out infinite 0.5s !important;
+}
+
+@keyframes bounce-lay {
+
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  25% {
+    transform: translateY(-18px) scale(1.05);
+  }
+
+  60% {
+    transform: translateY(4px) scale(0.98);
+  }
+}
 
 .farm-controls {
   display: flex;

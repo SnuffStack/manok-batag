@@ -76,7 +76,7 @@ app.use('/uploads', express.static(uploadsDir, { maxAge: '1d' }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // Serve built frontend in production
-const distPath = path.join(__dirname, 'dist');
+const distPath = path.join(__dirname, '..', 'dist');
 if (fs.existsSync(distPath)) {
     app.use(express.static(distPath));
 } else {
@@ -453,6 +453,45 @@ app.patch('/api/settings', (req, res) => {
     try {
         const settings = db.updateSettings(req.body);
         res.json({ settings });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ─── ADMIN STATS/HISTORY ────────────────────────────────
+app.get('/api/admin/stats', (req, res) => {
+    try {
+        const db_instance = require('./db');
+        const allSubs = db_instance.getAllSubscriptionRequests();
+        const allCashouts = db_instance.getAllCashouts();
+        const approvedSubs = allSubs.filter(s => s.status === 'approved');
+        const approvedCashouts = allCashouts.filter(c => c.status === 'approved');
+        const totalSubRevenue = approvedSubs.reduce((sum, s) => sum + (s.price || 0), 0);
+        const totalCashoutAmount = approvedCashouts.reduce((sum, c) => sum + (c.amount || 0), 0);
+        res.json({
+            totalSubscriptions: approvedSubs.length,
+            totalSubscriptionRevenue: totalSubRevenue,
+            totalCashouts: approvedCashouts.length,
+            totalCashoutAmount: totalCashoutAmount
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/admin/history/subscriptions', (req, res) => {
+    try {
+        const items = db.getAllSubscriptionRequests().filter(s => s.status === 'approved');
+        res.json({ items });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/admin/history/cashouts', (req, res) => {
+    try {
+        const items = db.getAllCashouts().filter(c => c.status === 'approved');
+        res.json({ items });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
