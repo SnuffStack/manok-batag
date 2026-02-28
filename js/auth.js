@@ -475,8 +475,14 @@ export function showKYCPage(userData) {
               <option value="passport">Passport</option>
               <option value="drivers-license">Driver's License</option>
               <option value="national-id">National ID</option>
+              <option value="sss">SSS/GSIS ID</option>
+              <option value="voters-id">Voter's ID</option>
               <option value="other">Other</option>
             </select>
+          </div>
+          <div class="form-group">
+            <label>ID Number</label>
+            <input type="text" id="kyc-id-number" required placeholder="Enter ID Number">
           </div>
           <div class="form-group">
             <label>Upload ID Photo</label>
@@ -537,6 +543,7 @@ window.handleKYC = async function (event) {
     fd.append('last_name', document.getElementById('kyc-last-name').value.trim())
     fd.append('address', document.getElementById('kyc-address').value.trim())
     fd.append('birthdate', document.getElementById('kyc-birthdate').value)
+    fd.append('idNumber', document.getElementById('kyc-id-number').value.trim())
 
     fd.append('file', idFile, idFile.name)
 

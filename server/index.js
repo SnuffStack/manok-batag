@@ -72,6 +72,9 @@ const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 app.use('/uploads', express.static(uploadsDir, { maxAge: '1d' }));
 
+// Also serve the public folder for static assets like icon and sounds
+app.use(express.static(path.join(__dirname, '..', 'public')));
+
 // Serve built frontend in production
 const distPath = path.join(__dirname, 'dist');
 if (fs.existsSync(distPath)) {
@@ -200,7 +203,7 @@ app.delete('/api/users/:id', (req, res) => {
 // ─── KYC ────────────────────────────────────────────────
 app.post('/api/kyc', upload.single('file'), (req, res) => {
     try {
-        const { userId, idType, first_name, last_name, address, birthdate } = req.body;
+        const { userId, idType, idNumber, first_name, last_name, address, birthdate } = req.body;
         if (!userId) return res.status(400).json({ error: 'userId required' });
 
         const file = req.file;
@@ -211,7 +214,7 @@ app.post('/api/kyc', upload.single('file'), (req, res) => {
             userId,
             filename,
             filepath,
-            details: { first_name, last_name, address, birthdate }
+            details: { idType, idNumber, first_name, last_name, address, birthdate }
         });
 
         const publicUrl = filepath ? '/' + filepath : null;
@@ -225,6 +228,15 @@ app.post('/api/kyc', upload.single('file'), (req, res) => {
 app.get('/api/kyc/pending', (req, res) => {
     try {
         const items = db.getPendingKyc();
+        res.json({ items });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/kyc', (req, res) => {
+    try {
+        const items = db.getAllKyc();
         res.json({ items });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -252,6 +264,15 @@ app.patch('/api/kyc/:id', (req, res) => {
         const result = db.updateKycStatus(req.params.id, status, reason);
         if (!result) return res.status(404).json({ error: 'KYC not found' });
         res.json({ item: result });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.delete('/api/kyc/:id', (req, res) => {
+    try {
+        db.deleteKycRequest(req.params.id);
+        res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -305,6 +326,15 @@ app.patch('/api/cashouts/:id', (req, res) => {
     }
 });
 
+app.delete('/api/cashouts/:id', (req, res) => {
+    try {
+        db.deleteCashoutRequest(req.params.id);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // ─── GAME MECHANICS ─────────────────────────────────────
 app.post('/api/feed', (req, res) => {
     try {
@@ -336,7 +366,27 @@ app.post('/api/bonuses/daily', (req, res) => {
     }
 });
 
+app.get('/api/bananas/history/:userId', (req, res) => {
+    try {
+        const history = db.getBananaHistory(req.params.userId);
+        res.json({ items: history });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // ─── SUBSCRIPTION REQUESTS ──────────────────────────────
+app.delete('/api/subscription-requests/:id', (req, res) => {
+    console.log('DELETE subscription request:', req.params.id);
+    try {
+        db.deleteSubscriptionRequest(req.params.id);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Delete sub error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.get('/api/subscription-requests', (req, res) => {
     try {
         const items = db.getAllSubscriptionRequests();

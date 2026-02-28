@@ -3,6 +3,15 @@
 //   localStorage.setItem('local_is_admin','true')
 
 // Wrap previous isAdmin call with a robust fallback to support server and local modes
+const formatPlanName = (plan) => {
+  if (!plan) return 'N/A'
+  const p = plan.toLowerCase()
+  if (p === 'basic' || p === 'hatchling') return 'HATCHLING'
+  if (p === 'premium' || p === 'henhouse') return 'HEN HOUSE'
+  if (p === 'vip' || p === 'goldenfarm') return 'GOLDEN FARM'
+  return p.toUpperCase()
+}
+
 export async function isAdmin() {
   // explicit local override
   if (localStorage.getItem('local_is_admin') === 'true') return true
@@ -249,6 +258,26 @@ async function loadDashboard() {
   const pendingKYC = users.filter(u => u.kyc_status === 'pending').length
   const pendingCashouts = cashouts.filter(c => c.status === 'pending').length
 
+  const totalSubscriptionVolume = users.reduce((acc, u) => {
+    // This is a rough estimate if not explicitly stored in a separate table, 
+    // but we can also use confirmed subscription requests if we fetch them.
+    return acc + (u.total_subscription_paid || 0)
+  }, 0)
+
+  // Better approach: Calculate from cashouts and subscriptions directly if available
+  const totalCashoutVolume = cashouts.filter(c => c.status === 'approved').reduce((acc, c) => acc + (c.amount || 0), 0)
+
+  // Since we don't have total_subscription_paid in users yet, let's fetch all sub requests
+  let allSubs = []
+  try {
+    const sResp = await fetch('/api/subscription-requests')
+    if (sResp.ok) {
+      const b = await sResp.json()
+      allSubs = b.items || []
+    }
+  } catch (e) { }
+  const totalSubRevenue = allSubs.filter(s => s.status === 'approved').reduce((acc, s) => acc + (s.price || 0), 0)
+
   content.innerHTML = `
     <div class="admin-stats">
       <div class="admin-stat-card">
@@ -256,13 +285,6 @@ async function loadDashboard() {
         <div class="admin-stat-info">
           <h3>Total Users</h3>
           <p>${totalUsers}</p>
-        </div>
-      </div>
-      <div class="admin-stat-card">
-        <div class="admin-stat-icon orange">🔑</div>
-        <div class="admin-stat-info">
-          <h3>Admins</h3>
-          <p>${totalAdmins}</p>
         </div>
       </div>
       <div class="admin-stat-card">
@@ -275,8 +297,15 @@ async function loadDashboard() {
       <div class="admin-stat-card">
         <div class="admin-stat-icon green">💰</div>
         <div class="admin-stat-info">
-          <h3>Pending Cashouts</h3>
-          <p>${pendingCashouts}</p>
+          <h3>Total Subscriptions</h3>
+          <p>₱${formatMoney(totalSubRevenue)}</p>
+        </div>
+      </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon orange">💸</div>
+        <div class="admin-stat-info">
+          <h3>Total Cashouts</h3>
+          <p>₱${formatMoney(totalCashoutVolume)}</p>
         </div>
       </div>
     </div>
@@ -507,6 +536,7 @@ async function loadUsers() {
               <div class="user-status"><span class="status-badge ${user.kyc_status || 'pending'}">${user.kyc_status || 'pending'}</span></div>
               <div class="user-actions">
                 <button class="btn btn-info btn-sm" onclick="event.stopPropagation(); showUserDetails('${user.id}')">View</button>
+                <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); confirmDeleteUser('${user.id}')">Delete</button>
               </div>
             </div>
           </div>
@@ -589,13 +619,19 @@ async function loadKYCPending() {
                 <div class="kyc-meta">
                   <div class="user-email">${display}</div>
                   <div class="user-sub">${k.idType || (u && u.kyc_id_type) || 'ID Document'} • ${k.submitted_at ? new Date(k.submitted_at).toLocaleDateString() : ''}</div>
-                  <div class="user-code">CODE: ${code}</div>
+                  <div class="kyc-details-grid" style="font-size: 11px; color: var(--gray); margin-top: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                    <div><strong>Name:</strong> ${k.first_name || ''} ${k.last_name || ''}</div>
+                    <div><strong>ID #:</strong> ${k.idNumber || 'N/A'}</div>
+                    <div style="grid-column: span 2;"><strong>Address:</strong> ${k.address || 'N/A'}</div>
+                    <div><strong>Birthdate:</strong> ${k.birthdate || 'N/A'}</div>
+                  </div>
                 </div>
               </div>
               <div class="kyc-actions">
                 <button type="button" class="btn btn-success" onclick="event.preventDefault(); approveKYC('${k.userId}', '${k.id}')">Approve</button>
                 <button type="button" class="btn btn-danger" onclick="event.preventDefault(); rejectKYC('${k.userId}', '${k.id}')">Reject</button>
                 ${viewUrl ? `<button type="button" class="btn btn-info" onclick="event.preventDefault(); previewKycDocument('${viewUrl}', '${display.replace(/'/g, "\\'")}')">View ID</button>` : ''}
+                <button type="button" class="btn btn-danger btn-outline btn-xs" onclick="deleteKYCRequest('${k.id}')" style="margin-left:auto;">Delete Request</button>
               </div>
             </div>
           `
@@ -609,6 +645,9 @@ async function loadKYCPending() {
             <div class="panel-body kyc-grid">
               ${itemsHtml}
             </div>
+            <div class="panel-footer" style="padding: 20px; text-align: center; background: #fafafa; border-radius: 0 0 12px 12px; border-top: 1px solid var(--border);">
+              <button class="btn btn-secondary" onclick="loadKYCHistory()">View All KYC History</button>
+            </div>
           </div>
         `
         return
@@ -618,7 +657,81 @@ async function loadKYCPending() {
     /* ignore server errors */
   }
 
-  content.innerHTML = '<div class="panel-card"><div class="panel-body"><div class="admin-empty-state"><p>No pending KYC requests.</p></div></div></div>'
+  content.innerHTML = `
+    <div class="panel-card">
+      <div class="panel-body">
+        <div class="admin-empty-state"><p>No pending KYC requests.</p></div>
+      </div>
+      <div class="panel-footer" style="padding: 20px; text-align: center; background: #fafafa; border-radius: 0 0 12px 12px; border-top: 1px solid var(--border);">
+        <button class="btn btn-secondary" onclick="loadKYCHistory()">View All KYC History</button>
+      </div>
+    </div>
+  `
+}
+
+async function loadKYCHistory() {
+  const content = document.getElementById('admin-content')
+  content.innerHTML = '<div class="loading">Loading KYC history...</div>'
+  try {
+    const [kResp, uResp] = await Promise.all([
+      fetch('/api/kyc'),
+      fetch('/api/users')
+    ])
+    const { items } = await kResp.json()
+    const { users } = await uResp.json()
+    const usersMap = users.reduce((acc, u) => { acc[u.id] = u; return acc }, {})
+
+    content.innerHTML = `
+      <div class="panel-card">
+        <div class="panel-header">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <button class="btn btn-secondary btn-sm" onclick="loadKYCPending()">← Back</button>
+            <h2>KYC History</h2>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="admin-table-container">
+            <div class="admin-table-wrapper">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>ID Type</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${items.map(k => {
+      const u = usersMap[k.userId]
+      const email = u ? u.email : (k.userId || 'N/A')
+      const viewUrl = k.filepath ? (k.filepath.startsWith('http') ? k.filepath : ('/' + String(k.filepath).replace(/\\/g, '/').replace(/^\/+/, ''))) : ''
+      return `
+                      <tr>
+                        <td><strong>${email}</strong></td>
+                        <td>${k.idType || 'Document'}</td>
+                        <td><span class="status-badge ${k.status}">${k.status}</span></td>
+                        <td>${new Date(k.submitted_at || k.requested_at).toLocaleDateString()}</td>
+                        <td>
+                          <div style="display:flex; gap:4px;">
+                            ${viewUrl ? `<button class="btn btn-xs btn-info" onclick="previewKycDocument('${viewUrl}', '${email.replace(/'/g, "\\'")}')">View</button>` : ''}
+                            <button class="btn btn-xs btn-danger" onclick="deleteKYCRequest('${k.id}')">Delete</button>
+                          </div>
+                        </td>
+                      </tr>
+                    `
+    }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    `
+  } catch (e) {
+    content.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`
+  }
 }
 
 async function loadCashouts() {
@@ -671,12 +784,74 @@ async function loadCashouts() {
             <div class="cashout-actions">
               <button class="btn btn-info" onclick="openProcessCashoutModal('${c.id}')">Process</button>
               <button class="btn btn-secondary" style="margin-left:8px" onclick="openCashoutRejectModal('${c.id}')">Reject</button>
+              <button class="btn btn-danger btn-sm" style="margin-left:auto;" onclick="deleteCashoutRequest('${c.id}')">Delete</button>
             </div>
           </div>
         `).join('')}
       </div>
+      <div class="panel-footer" style="padding: 20px; text-align: center; background: #fafafa;">
+        <button class="btn btn-secondary" onclick="loadCashoutHistory()">View Approved History</button>
+      </div>
     </div>
   `
+}
+
+async function loadCashoutHistory() {
+  const content = document.getElementById('admin-content')
+  content.innerHTML = '<div class="loading">Loading cashout history...</div>'
+  try {
+    const resp = await fetch('/api/cashouts')
+    if (!resp.ok) throw new Error('Failed to load')
+    const { items } = await resp.json()
+    const approved = items.filter(i => i.status === 'approved')
+
+    const uResp = await fetch('/api/users')
+    const { users } = await uResp.json()
+    const usersMap = users.reduce((acc, u) => { acc[u.id] = u; return acc }, {})
+
+    content.innerHTML = `
+      <div class="panel-card">
+        <div class="panel-header">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <button class="btn btn-secondary btn-sm" onclick="loadCashouts()">← Back</button>
+            <h2>Approved Cashouts</h2>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="admin-table-container">
+            <div class="admin-table-wrapper">
+              <table class="admin-table">
+               <thead>
+                 <tr>
+                   <th>User</th>
+                   <th>Amount</th>
+                   <th>Method</th>
+                   <th>Approved At</th>
+                   <th>Actions</th>
+                 </tr>
+               </thead>
+               <tbody>
+                 ${approved.map(c => `
+                   <tr>
+                     <td>${usersMap[c.userId]?.email || c.userId}</td>
+                     <td style="color:var(--primary); font-weight:bold;">₱${formatMoney(c.amount)}</td>
+                     <td>${c.payment_method}</td>
+                     <td>${new Date(c.approved_at).toLocaleString()}</td>
+                     <td>
+                       <button class="btn btn-xs btn-danger" onclick="deleteCashoutRequest('${c.id}')">Delete</button>
+                     </td>
+                   </tr>
+                 `).join('')}
+               </tbody>
+             </table>
+           </div>
+         </div>
+       </div>
+      </div>
+    `
+  } catch (e) {
+    content.innerHTML = `<div class="alert alert-error">${e.message}</div>`
+  }
 }
 
 async function loadSubscriptions() {
@@ -698,12 +873,15 @@ async function loadSubscriptions() {
     const pm = settings?.payment_methods || {}
 
     content.innerHTML = `
-      <div class="panel-card" style="margin-bottom: 30px; border: 2px solid var(--primary);">
-        <div class="panel-header" style="background: rgba(255, 149, 0, 0.05);">
-          <h2>⚙️ Global Payment Settings</h2>
-          <p style="font-size: 12px; color: var(--gray);">Changing these affects what users see when they activate a subscription.</p>
+      <div class="panel-card collapsible-panel" style="margin-bottom: 30px; border: 2px solid var(--primary);">
+        <div class="panel-header" onclick="toggleGlobalSettings()" style="background: rgba(255, 149, 0, 0.05); cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 15px 20px;">
+          <div>
+            <h2 style="margin:0">⚙️ Global Payment Settings</h2>
+            <p style="font-size: 12px; color: var(--gray); margin: 5px 0 0 0;">Changing these affects what users see when they activate a subscription.</p>
+          </div>
+          <span id="global-settings-toggle-icon" style="font-size: 20px; transition: transform 0.3s ease;">🔽</span>
         </div>
-        <div class="panel-body">
+        <div class="panel-body" id="global-settings-body" style="display: none; padding: 20px; border-top: 1px solid rgba(255, 149, 0, 0.1);">
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
             <!-- GCash -->
             <div style="padding: 15px; background: #f9f9f9; border-radius: 12px; border: 1px solid #eee;">
@@ -755,7 +933,8 @@ async function loadSubscriptions() {
         <div class="panel-body">
           ${items.length === 0 ? '<div class="admin-empty-state"><p>No pending subscription requests.</p></div>' : `
           <div class="admin-table-container">
-            <table class="admin-table">
+            <div class="admin-table-wrapper">
+              <table class="admin-table">
               <thead>
                 <tr>
                   <th>User</th>
@@ -775,26 +954,96 @@ async function loadSubscriptions() {
                         <div style="font-weight:700">${u?.email || 'N/A'}</div>
                         <div style="font-size:11px;color:#999">UID: ${req.userId.slice(0, 8)}</div>
                       </td>
-                      <td><span class="status-badge approved">${req.plan.toUpperCase()}</span></td>
+                      <td><span class="status-badge approved">${formatPlanName(req.plan)}</span></td>
                       <td><strong>${req.method}</strong> (₱${req.price})</td>
                       <td><code>${req.refNumber}</code></td>
                       <td>${new Date(req.requested_at).toLocaleDateString()}</td>
                       <td>
-                        <button class="btn btn-sm btn-success" onclick="approveSubscription('${req.id}')">Approve</button>
-                        <button class="btn btn-sm btn-secondary" onclick="rejectSubscription('${req.id}')">Reject</button>
+                        <div style="display:flex; gap:4px;">
+                          <button class="btn btn-xs btn-success" onclick="approveSubscription('${req.id}')">Approve</button>
+                          <button class="btn btn-xs btn-secondary" onclick="rejectSubscription('${req.id}')">Reject</button>
+                          ${req.receipt_url ? `<button class="btn btn-xs btn-info" onclick="previewKycDocument('${req.receipt_url}', '${u?.email || 'Receipt'}')">Receipt</button>` : ''}
+                          <button class="btn btn-xs btn-danger" onclick="deleteSubscriptionRequest('${req.id}')">Delete</button>
+                        </div>
                       </td>
                     </tr>
                   `
     }).join('')}
               </tbody>
-            </table>
-          </div>
-          `}
+             </table>
+           </div>
+         </div>
+           `}
+        </div>
+        <div class="panel-footer" style="padding: 20px; text-align: center; background: #fafafa;">
+           <button class="btn btn-secondary" onclick="loadSubscriptionHistory()">View Full History</button>
         </div>
       </div>
     `
   } catch (e) {
     content.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`
+  }
+}
+
+async function loadSubscriptionHistory() {
+  const content = document.getElementById('admin-content')
+  content.innerHTML = '<div class="loading">Loading subscription history...</div>'
+  try {
+    const [sResp, uResp] = await Promise.all([
+      fetch('/api/subscription-requests'),
+      fetch('/api/users')
+    ])
+    const { items } = await sResp.json()
+    const { users } = await uResp.json()
+    const usersMap = users.reduce((acc, u) => { acc[u.id] = u; return acc }, {})
+
+    content.innerHTML = `
+      <div class="panel-card">
+        <div class="panel-header">
+           <div style="display:flex; align-items:center; gap:12px;">
+            <button class="btn btn-secondary btn-sm" onclick="loadSubscriptions()">← Back</button>
+            <h2>Subscription History</h2>
+          </div>
+        </div>
+        <div class="panel-body">
+           <div class="admin-table-container">
+             <div class="admin-table-wrapper">
+                <table class="admin-table">
+                   <thead>
+                     <tr>
+                       <th>User</th>
+                       <th>Plan</th>
+                       <th>Price</th>
+                       <th>Status</th>
+                       <th>Date</th>
+                       <th>Actions</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     ${items.map(req => `
+                       <tr>
+                         <td>${usersMap[req.userId]?.email || req.userId}</td>
+                         <td>${formatPlanName(req.plan)}</td>
+                         <td>₱${req.price}</td>
+                         <td><span class="status-badge ${req.status}">${req.status}</span></td>
+                         <td>${new Date(req.requested_at).toLocaleDateString()}</td>
+                          <td>
+                            <div style="display:flex; gap:4px;">
+                              ${req.receipt_url ? `<button class="btn btn-xs btn-info" onclick="previewKycDocument('${req.receipt_url}', '${usersMap[req.userId]?.email || 'Receipt'}')">Receipt</button>` : ''}
+                              <button class="btn btn-xs btn-danger" onclick="deleteSubscriptionRequest('${req.id}')">Delete</button>
+                            </div>
+                          </td>
+                       </tr>
+                     `).join('')}
+                   </tbody>
+                </table>
+             </div>
+          </div>
+        </div>
+      </div>
+    `
+  } catch (e) {
+    content.innerHTML = `<div class="alert alert-error">${e.message}</div>`
   }
 }
 
@@ -1549,3 +1798,93 @@ function showToast(message, type = 'info', timeout = 3000) {
 }
 
 window.showToast = showToast
+window.loadCashoutHistory = loadCashoutHistory
+window.loadSubscriptionHistory = loadSubscriptionHistory
+window.approveSubscription = approveSubscription
+window.rejectSubscription = rejectSubscription
+window.loadSubscriptions = loadSubscriptions
+window.loadCashouts = loadCashouts
+window.rejectKYC = rejectKYC
+window.deleteSubscriptionRequest = deleteSubscriptionRequest
+window.confirmDeleteUser = confirmDeleteUser
+window.deleteKYCRequest = deleteKYCRequest
+window.deleteCashoutRequest = deleteCashoutRequest
+window.loadKYCHistory = loadKYCHistory
+
+async function confirmDeleteUser(id) {
+  if (!confirm('Are you sure you want to delete this user? All their data (KYC, Cashouts, Subscriptions) will be permanently removed.')) return
+  try {
+    const resp = await fetch('/api/users/' + id, { method: 'DELETE' })
+    if (!resp.ok) throw new Error('Delete failed')
+    showToast('User deleted')
+    loadUsers()
+  } catch (e) {
+    showToast(e.message, 'error')
+  }
+}
+
+async function deleteKYCRequest(id) {
+  if (!confirm('Are you sure you want to delete this KYC request?')) return
+  try {
+    const resp = await fetch('/api/kyc/' + id, { method: 'DELETE' })
+    if (!resp.ok) throw new Error('Delete failed')
+    showToast('KYC request deleted')
+    // Refresh current view
+    const content = document.getElementById('admin-content')
+    if (content.innerText.includes('KYC History')) {
+      loadKYCHistory()
+    } else {
+      loadKYCPending()
+    }
+  } catch (e) {
+    showToast(e.message, 'error')
+  }
+}
+
+async function deleteCashoutRequest(id) {
+  if (!confirm('Are you sure you want to delete this cashout record?')) return
+  try {
+    const resp = await fetch('/api/cashouts/' + id, { method: 'DELETE' })
+    if (!resp.ok) throw new Error('Delete failed')
+    showToast('Cashout deleted')
+    // Refresh current view (either history or pending)
+    const content = document.getElementById('admin-content')
+    if (content.innerText.includes('Approved Cashouts')) {
+      loadCashoutHistory()
+    } else {
+      loadCashouts()
+    }
+  } catch (e) {
+    showToast(e.message, 'error')
+  }
+}
+
+async function deleteSubscriptionRequest(id) {
+  if (!confirm('Are you sure you want to delete this subscription record? This is permanent.')) return
+  try {
+    const resp = await fetch('/api/subscription-requests/' + id, { method: 'DELETE' })
+    if (!resp.ok) throw new Error('Delete failed')
+    showToast('Record deleted')
+    // Refresh current view
+    const content = document.getElementById('admin-content')
+    if (content.innerText.includes('Subscription History')) {
+      loadSubscriptionHistory()
+    } else {
+      loadSubscriptions()
+    }
+  } catch (e) {
+    showToast(e.message, 'error')
+  }
+}
+
+window.toggleGlobalSettings = function () {
+  const body = document.getElementById('global-settings-body')
+  const icon = document.getElementById('global-settings-toggle-icon')
+  if (body) {
+    const isHidden = body.style.display === 'none'
+    body.style.display = isHidden ? 'block' : 'none'
+    if (icon) {
+      icon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)'
+    }
+  }
+}

@@ -41,12 +41,13 @@ export async function showDashboard(data) {
 
       <main class="dashboard-content">
         <div class="stats-container">
-          <div class="stat-card bananas">
+          <div class="stat-card bananas" onclick="loadBananaHistory()" style="cursor:pointer;">
             <div class="stat-icon">🍌</div>
             <div class="stat-info">
               <span class="stat-label">Bananas</span>
               <span class="stat-value" id="banana-count">${data.bananas || 0}</span>
             </div>
+            <button class="btn-sm" style="margin-left:auto;">History</button>
           </div>
           <div class="stat-card eggs">
             <div class="stat-icon">🥚</div>
@@ -77,7 +78,7 @@ export async function showDashboard(data) {
             <div class="grassy-field">
               <div class="chicken-shadow"></div>
               <div class="chicken-main" id="chicken">
-                <img src="/chicken.png" alt="Chicken" />
+                <img src="chicken.png" alt="Chicken" />
               </div>
             </div>
           </div>
@@ -96,7 +97,7 @@ export async function showDashboard(data) {
             <span class="card-subtitle">Boost your earnings with a subscription</span>
           </div>
           <div class="subscriptions-grid">
-            <div class="subscription-card ${data.subscription === 'basic' ? 'active' : ''}">
+            <div class="subscription-card ${data.subscription === 'basic' || data.subscription === 'hatchling' ? 'active' : ''}">
               <div class="sub-header" onclick="toggleSub(this)">
                 <div class="sub-header-top">
                     <div class="subscription-tag">HATCHLING</div>
@@ -106,14 +107,14 @@ export async function showDashboard(data) {
               </div>
               <div class="sub-details">
                 <ul class="subscription-features">
-                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 16 daily bananas</li>
+                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 40 daily bananas</li>
                     <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> No minimum cashout</li>
                 </ul>
-                ${data.subscription === 'basic' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" data-plan="basic" onclick="purchaseSubscription('basic', 199)">Activate Subscription</button>`}
+                ${data.subscription === 'basic' || data.subscription === 'hatchling' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" data-plan="hatchling" onclick="purchaseSubscription('hatchling', 199)">Activate Subscription</button>`}
               </div>
             </div>
             
-            <div class="subscription-card featured ${data.subscription === 'premium' ? 'active' : ''}">
+            <div class="subscription-card featured ${data.subscription === 'premium' || data.subscription === 'henhouse' ? 'active' : ''}">
               <div class="sub-header" onclick="toggleSub(this)">
                 <div class="sub-header-top">
                     <div class="subscription-tag">HEN HOUSE</div>
@@ -123,14 +124,14 @@ export async function showDashboard(data) {
               </div>
               <div class="sub-details">
                   <ul class="subscription-features">
-                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 50 daily bananas</li>
+                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 180 daily bananas</li>
                     <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> No minimum cashout</li>
                   </ul>
-                  ${data.subscription === 'premium' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" data-plan="premium" onclick="purchaseSubscription('premium', 599)">Activate Subscription</button>`}
+                  ${data.subscription === 'premium' || data.subscription === 'henhouse' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" data-plan="henhouse" onclick="purchaseSubscription('henhouse', 599)">Activate Subscription</button>`}
               </div>
             </div>
             
-            <div class="subscription-card vip ${data.subscription === 'vip' ? 'active' : ''}">
+            <div class="subscription-card vip ${data.subscription === 'vip' || data.subscription === 'goldenfarm' ? 'active' : ''}">
               <div class="sub-header" onclick="toggleSub(this)">
                 <div class="sub-header-top">
                     <div class="subscription-tag">GOLDEN FARM</div>
@@ -140,10 +141,10 @@ export async function showDashboard(data) {
               </div>
               <div class="sub-details">
                   <ul class="subscription-features">
-                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 140 daily bananas</li>
+                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 600 daily bananas</li>
                     <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> No minimum cashout</li>
                   </ul>
-                  ${data.subscription === 'vip' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" data-plan="vip" onclick="purchaseSubscription('vip', 1499)">Activate Subscription</button>`}
+                  ${data.subscription === 'vip' || data.subscription === 'goldenfarm' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" data-plan="goldenfarm" onclick="purchaseSubscription('goldenfarm', 1499)">Activate Subscription</button>`}
               </div>
             </div>
           </div>
@@ -154,7 +155,7 @@ export async function showDashboard(data) {
         <div class="referral-section card">
           <div class="card-header">
             <span class="card-title">📢 Invite Friends</span>
-            <span class="card-subtitle">Earn 1 Banana for every sign-up via your link!</span>
+            <span class="card-subtitle">Get 1 🍌 on friend KYC + up to 600 🍌 on their upgrade!</span>
           </div>
           <div class="referral-container">
             <div class="referral-input-group">
@@ -238,9 +239,10 @@ async function checkSubscriptionRequests() {
       const { items } = await resp.json()
       const myRequest = items.find(r => r.userId === userData.id && r.status === 'pending')
       if (myRequest) {
+        const planDisplay = planNames[myRequest.plan.toLowerCase()] || myRequest.plan.toUpperCase()
         banner.innerHTML = `
           <div class="alert alert-info">
-            <strong>Subcription Pending:</strong> Your request for ${myRequest.plan.toUpperCase()} plan is currently being verified by an admin.
+            <strong>Subcription Pending:</strong> Your request for ${planDisplay} plan is currently being verified by an admin.
           </div>
         `
         // Disable "Activate Subscription" buttons but only show Pending on the target one
@@ -487,7 +489,14 @@ window.feedChicken = async function () {
   feedBtn.disabled = true
   statusDiv.textContent = 'Feeding chicken...'
 
-  playSound('lay') // Play lay sound
+  chicken.classList.add('eating')
+  playSound('feed') // Play pecking sound
+  setTimeout(() => {
+    playSound('lay') // Play lay sound
+    chicken.classList.remove('eating')
+    chicken.classList.add('laying')
+    setTimeout(() => chicken.classList.remove('laying'), 1000)
+  }, 500)
 
   const egg = document.createElement('div')
   egg.className = 'egg-animation'
@@ -569,8 +578,8 @@ window.feedChicken = async function () {
 // Interactive Helpers
 let isMuted = JSON.parse(localStorage.getItem('chicken_muted') || 'false')
 const sounds = {
-  feed: new Audio('/assets/sounds/chicken sound .mp3'),
-  lay: new Audio('/assets/sounds/lay eggs sound.mp3')
+  feed: new Audio('assets/sounds/chicken-sound.mp3'),
+  lay: new Audio('assets/sounds/lay-eggs-sound.mp3')
 }
 
 // Preload
@@ -588,10 +597,53 @@ function playSound(type) {
   }
 }
 
-window.toggleMute = function () {
-  isMuted = !isMuted
-  localStorage.setItem('chicken_muted', isMuted)
-  updateMuteIcon()
+window.openBananaHistory = async function() {
+  const modalBody = `
+    <div id="banana-history-modal" class="history-list">
+      <div class="skeleton-loader"></div>
+    </div>
+  `
+  
+  // Use a generic modal helper if available, or just alert/simple modal
+  // Assuming there is an openModal system or similar
+  // Let's create a simple modal overlay
+  const overlay = document.createElement('div')
+  overlay.className = 'modal-overlay'
+  overlay.innerHTML = `
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🍌 Banana History</h3>
+        <button onclick="this.closest('.modal-overlay').remove()">✕</button>
+      </div>
+      <div class="modal-body" id="banana-history-list">
+        <div class="loading">Loading history...</div>
+      </div>
+    </div>
+  `
+  document.body.appendChild(overlay)
+  
+  try {
+    const resp = await fetch('/api/bananas/history/' + userData.id)
+    const { items } = await resp.json()
+    const list = document.getElementById('banana-history-list')
+    
+    if (!items || items.length === 0) {
+      list.innerHTML = '<p style="text-align:center; color:gray; padding:20px;">No history yet.</p>'
+      return
+    }
+    
+    list.innerHTML = items.map(h => `
+      <div class="history-item" style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #eee;">
+        <div>
+          <div style="font-weight:700;">${h.reason || 'Bonus'}</div>
+          <div style="font-size:11px; color:gray;">${new Date(h.created_at).toLocaleString()}</div>
+        </div>
+        <div style="color:var(--primary); font-weight:800;">+${h.amount} 🍌</div>
+      </div>
+    `).join('')
+  } catch (e) {
+    document.getElementById('banana-history-list').innerHTML = '<p>Error loading history.</p>'
+  }
 }
 
 function updateMuteIcon() {
@@ -663,7 +715,10 @@ window.purchaseSubscription = async function (plan, price) {
   const planNames = {
     'basic': 'HATCHLING',
     'premium': 'HEN HOUSE',
-    'vip': 'GOLDEN FARM'
+    'vip': 'GOLDEN FARM',
+    'hatchling': 'HATCHLING',
+    'henhouse': 'HEN HOUSE',
+    'goldenfarm': 'GOLDEN FARM'
   }
   const displayName = planNames[plan.toLowerCase()] || plan.toUpperCase()
 
@@ -961,5 +1016,52 @@ window.copyUserReferralLink = function () {
 
 window.handleLogout = async function () {
   await logout()
+}
+
+window.loadBananaHistory = async function () {
+  const modal = document.createElement('div')
+  modal.className = 'modal-overlay active'
+  modal.innerHTML = `
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>🍌 Banana History</h2>
+        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+      </div>
+      <div class="modal-body" id="banana-history-content">
+        <div class="loading">Loading history...</div>
+      </div>
+    </div>
+  `
+  document.body.appendChild(modal)
+
+  try {
+    const resp = await fetch(`/api/bananas/history/${userData.id}`)
+    if (!resp.ok) throw new Error('Failed to load history')
+    const { items } = await resp.json()
+
+    const content = document.getElementById('banana-history-content')
+    if (items.length === 0) {
+      content.innerHTML = '<p style="text-align:center;color:#999;padding:20px;">No history yet.</p>'
+      return
+    }
+
+    content.innerHTML = `
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        ${items.map(i => `
+          <div style="background:#f1fcf4; padding:12px; border-radius:12px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-weight:700; color:#333;">${i.reason}</div>
+              <div style="font-size:11px; color:#999;">${new Date(i.created_at).toLocaleString()}</div>
+            </div>
+            <div style="font-weight:800; color:${i.amount > 0 ? '#2e7d32' : '#c62828'}; font-size:1.1rem;">
+              ${i.amount > 0 ? '+' : ''}${i.amount} 🍌
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `
+  } catch (e) {
+    document.getElementById('banana-history-content').innerHTML = `<div class="alert alert-error">${e.message}</div>`
+  }
 }
 

@@ -57,7 +57,12 @@ function init() {
       approved_at TEXT,
       rejected_at TEXT,
       rejection_reason TEXT,
-      idType TEXT
+      idType TEXT,
+      idNumber TEXT,
+      first_name TEXT,
+      last_name TEXT,
+      address TEXT,
+      birthdate TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_kyc_userId ON kyc(userId);
     CREATE INDEX IF NOT EXISTS idx_kyc_status ON kyc(status);
@@ -85,10 +90,21 @@ function init() {
       status TEXT DEFAULT 'pending',
       requested_at TEXT,
       processed_at TEXT,
-      rejection_reason TEXT
+      rejection_reason TEXT,
+      receipt_url TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_sub_requests_userId ON subscription_requests(userId);
     CREATE INDEX IF NOT EXISTS idx_sub_requests_status ON subscription_requests(status);
+
+    CREATE TABLE IF NOT EXISTS banana_history (
+      id TEXT PRIMARY KEY,
+      userId TEXT,
+      amount INTEGER,
+      reason TEXT,
+      type TEXT, -- 'reward', 'feed', 'referral', 'daily'
+      created_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_banana_hist_userId ON banana_history(userId);
 
     CREATE TABLE IF NOT EXISTS settings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -164,12 +180,6 @@ function applyReferral(referralCode, newUserId) {
   if (!referralCode) return;
   const ref = db.prepare('SELECT * FROM users WHERE UPPER(referral_code) = ?').get(referralCode.toUpperCase());
   if (!ref) return;
-
-  // Check if referrer is KYC approved
-  if (ref.kyc_status !== 'approved') return;
-
-  // Update referrer
-  db.prepare('UPDATE users SET bananas = bananas + 1, referrals = referrals + 1 WHERE id = ?').run(ref.id);
 
   // Update new user
   db.prepare('UPDATE users SET referred_by = ? WHERE id = ?').run(ref.id, newUserId);
@@ -256,12 +266,12 @@ function createKyc({ userId, filename, filepath, details }) {
   const kid = Math.random().toString(36).slice(2, 10);
   const now = new Date().toISOString();
 
-  const { first_name, last_name, address, birthdate } = details || {};
+  const { first_name, last_name, address, birthdate, idNumber } = details || {};
 
   db.prepare(`
-    INSERT INTO kyc (id, userId, filename, filepath, status, submitted_at, first_name, last_name, address, birthdate)
-    VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)
-  `).run(kid, userId, filename, filepath, now, first_name || null, last_name || null, address || null, birthdate || null);
+    INSERT INTO kyc (id, userId, filename, filepath, status, submitted_at, first_name, last_name, address, birthdate, idNumber, idType)
+    VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)
+  `).run(kid, userId, filename, filepath, now, first_name || null, last_name || null, address || null, birthdate || null, idNumber || null, details?.idType || null);
 
   // update user
   db.prepare(`
@@ -285,6 +295,12 @@ function getKycByUser(userId) {
   return db.prepare('SELECT * FROM kyc WHERE userId = ? ORDER BY submitted_at DESC LIMIT 1').get(userId);
 }
 
+function logBanana(userId, amount, reason, type) {
+  const bid = Math.random().toString(36).slice(2, 10);
+  const now = new Date().toISOString();
+  db.prepare('INSERT INTO banana_history (id, userId, amount, reason, type, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(bid, userId, amount, reason, type, now);
+}
+
 function updateKycStatus(id, status, reason) {
   const k = db.prepare('SELECT * FROM kyc WHERE id = ?').get(id);
   if (!k) return null;
@@ -296,6 +312,11 @@ function updateKycStatus(id, status, reason) {
       UPDATE users SET kyc_status = 'approved', kyc_approved_at = ?, kyc_rejection_reason = NULL 
       WHERE id = ? OR LOWER(email) = ?
     `).run(now, k.userId, k.userId.toLowerCase());
+
+    // NEW Logic: 1 banana upon approval
+    db.prepare('UPDATE users SET bananas = bananas + 1 WHERE id = ?').run(k.userId);
+    logBanana(k.userId, 1, 'KYC Approved Reward', 'reward');
+
   } else if (status === 'rejected') {
     db.prepare("UPDATE kyc SET status = 'rejected', rejected_at = ?, rejection_reason = ? WHERE id = ?").run(now, reason, id);
     db.prepare(`
@@ -353,6 +374,8 @@ function feedChicken(userId) {
     WHERE id = ?
   `).run((lastDate !== todayStr ? 1 : eggsToday + 1), todayStr, userId);
 
+  logBanana(userId, -2, 'Fed Chicken', 'feed');
+
   return getUserById(userId);
 }
 
@@ -386,13 +409,14 @@ function claimDailyBonus(userId) {
   }
 
   let amount = 0;
-  if (user.subscription === 'basic') amount = 16;
-  else if (user.subscription === 'premium') amount = 50;
-  else if (user.subscription === 'vip') amount = 140;
+  if (user.subscription === 'basic' || user.subscription === 'hatchling') amount = 40;
+  else if (user.subscription === 'premium' || user.subscription === 'henhouse') amount = 180;
+  else if (user.subscription === 'vip' || user.subscription === 'goldenfarm') amount = 600;
 
   if (amount === 0) throw new Error('Subscription has no daily bonus');
 
   db.prepare('UPDATE users SET bananas = bananas + ?, last_daily_banana = ? WHERE id = ?').run(amount, now.toISOString(), userId);
+  logBanana(userId, amount, `Daily Bonus (${user.subscription})`, 'daily');
 
   return { user: getUserById(userId), added: amount };
 }
@@ -412,6 +436,18 @@ function getPendingSubscriptionRequests() {
   return db.prepare("SELECT * FROM subscription_requests WHERE status = 'pending' ORDER BY requested_at ASC").all();
 }
 
+function deleteKycRequest(id) {
+  return db.prepare('DELETE FROM kyc WHERE id = ?').run(id);
+}
+
+function deleteCashoutRequest(id) {
+  return db.prepare('DELETE FROM cashouts WHERE id = ?').run(id);
+}
+
+function deleteSubscriptionRequest(id) {
+  return db.prepare('DELETE FROM subscription_requests WHERE id = ?').run(id);
+}
+
 function getAllSubscriptionRequests() {
   return db.prepare("SELECT * FROM subscription_requests ORDER BY requested_at DESC").all();
 }
@@ -425,14 +461,37 @@ function updateSubscriptionRequestStatus(id, status, reason) {
 
   if (status === 'approved') {
     let bonus = 0;
-    if (req.plan === 'basic') bonus = 16;
-    else if (req.plan === 'premium') bonus = 50;
-    else if (req.plan === 'vip') bonus = 140;
+    if (req.plan === 'basic' || req.plan === 'hatchling') bonus = 40;
+    else if (req.plan === 'premium' || req.plan === 'henhouse') bonus = 180;
+    else if (req.plan === 'vip' || req.plan === 'goldenfarm') bonus = 600;
 
     db.prepare('UPDATE users SET subscription = ?, subscription_purchased_at = ?, bananas = bananas + ?, last_daily_banana = ? WHERE id = ?')
       .run(req.plan, now, bonus, now, req.userId);
+
+    logBanana(req.userId, bonus, `Subscription Bonus (${req.plan})`, 'daily');
+
+    // Referral Bonus Logic
+    const user = getUserById(req.userId);
+    if (user && user.referred_by) {
+      const referrer = getUserById(user.referred_by);
+      if (referrer && referrer.kyc_status === 'approved') {
+        let refBonus = 0;
+        if (req.plan === 'basic' || req.plan === 'hatchling') refBonus = 40;
+        else if (req.plan === 'premium' || req.plan === 'henhouse') refBonus = 180;
+        else if (req.plan === 'vip' || req.plan === 'goldenfarm') refBonus = 600;
+
+        if (refBonus > 0) {
+          db.prepare('UPDATE users SET bananas = bananas + ?, referrals = referrals + 1 WHERE id = ?').run(refBonus, referrer.id);
+          logBanana(referrer.id, refBonus, `Referral Upgrade Bonus (${req.plan})`, 'referral');
+        }
+      }
+    }
   }
   return db.prepare('SELECT * FROM subscription_requests WHERE id = ?').get(id);
+}
+
+function deleteSubscriptionRequest(id) {
+  return db.prepare('DELETE FROM subscription_requests WHERE id = ?').run(id);
 }
 
 function toggleAdmin(userId, isAdmin) {
@@ -492,10 +551,16 @@ module.exports = {
   getPendingSubscriptionRequests,
   getAllSubscriptionRequests,
   updateSubscriptionRequestStatus,
+  deleteSubscriptionRequest,
+  deleteKycRequest,
+  deleteCashoutRequest,
   toggleAdmin,
   deleteUser,
   getSettings,
   updateSettings,
   updateUser,
-  sellEggs
+  sellEggs,
+  getBananaHistory: (userId) => {
+    return db.prepare('SELECT * FROM banana_history WHERE userId = ? ORDER BY created_at DESC').all(userId);
+  }
 };
