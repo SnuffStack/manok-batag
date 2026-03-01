@@ -152,7 +152,23 @@ function getUserByIdentifier(identifier) {
 }
 
 function getUserById(id) {
-  return db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+  if (!user) return null;
+
+  // Auto-expire subscription after 60 days
+  if (user.subscription && user.subscription !== 'None' && user.subscription_purchased_at) {
+    const purchasedAt = new Date(user.subscription_purchased_at);
+    const now = new Date();
+    const diffDays = Math.floor((now - purchasedAt) / (1000 * 60 * 60 * 24));
+
+    if (diffDays >= 60) {
+      db.prepare("UPDATE users SET subscription = 'None', subscription_purchased_at = NULL WHERE id = ?").run(id);
+      user.subscription = 'None';
+      user.subscription_purchased_at = null;
+    }
+  }
+
+  return user;
 }
 
 function updateUser(id, fields) {
@@ -432,6 +448,15 @@ function claimDailyBonus(userId) {
   if (!user) throw new Error('User not found');
   if (!user.subscription || user.subscription === 'None') throw new Error('No active subscription');
 
+  // Double check expiration (getUserById handles it, but for safety in case of race/direct calls)
+  if (user.subscription_purchased_at) {
+    const purchasedAt = new Date(user.subscription_purchased_at);
+    const diffDays = Math.floor((new Date() - purchasedAt) / (1000 * 60 * 60 * 24));
+    if (diffDays >= 60) {
+      throw new Error('Subscription has expired (60 days limit). Please renew to claim daily bonuses.');
+    }
+  }
+
   const now = new Date();
   const last = user.last_daily_banana ? new Date(user.last_daily_banana) : null;
   if (last && last.getDate() === now.getDate() && last.getMonth() === now.getMonth() && last.getFullYear() === now.getFullYear()) {
@@ -439,9 +464,9 @@ function claimDailyBonus(userId) {
   }
 
   let amount = 0;
-  if (user.subscription === 'basic' || user.subscription === 'hatchling') amount = 40;
-  else if (user.subscription === 'premium' || user.subscription === 'henhouse') amount = 180;
-  else if (user.subscription === 'vip' || user.subscription === 'goldenfarm') amount = 600;
+  if (user.subscription === 'basic' || user.subscription === 'hatchling') amount = 16;
+  else if (user.subscription === 'premium' || user.subscription === 'henhouse') amount = 50;
+  else if (user.subscription === 'vip' || user.subscription === 'goldenfarm') amount = 140;
 
   if (amount === 0) throw new Error('Subscription has no daily bonus');
 
@@ -491,9 +516,9 @@ function updateSubscriptionRequestStatus(id, status, reason) {
 
   if (status === 'approved') {
     let bonus = 0;
-    if (req.plan === 'basic' || req.plan === 'hatchling') bonus = 40;
-    else if (req.plan === 'premium' || req.plan === 'henhouse') bonus = 180;
-    else if (req.plan === 'vip' || req.plan === 'goldenfarm') bonus = 600;
+    if (req.plan === 'basic' || req.plan === 'hatchling') bonus = 16;
+    else if (req.plan === 'premium' || req.plan === 'henhouse') bonus = 50;
+    else if (req.plan === 'vip' || req.plan === 'goldenfarm') bonus = 140;
 
     db.prepare('UPDATE users SET subscription = ?, subscription_purchased_at = ?, bananas = bananas + ?, last_daily_banana = ? WHERE id = ?')
       .run(req.plan, now, bonus, now, req.userId);

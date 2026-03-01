@@ -2,6 +2,15 @@ import { getCurrentUser, logout, showKYCPage } from './auth.js'
 
 let userData = null
 
+const planNames = {
+  'basic': 'HATCHLING',
+  'premium': 'HEN HOUSE',
+  'vip': 'GOLDEN FARM',
+  'hatchling': 'HATCHLING',
+  'henhouse': 'HEN HOUSE',
+  'goldenfarm': 'GOLDEN FARM'
+}
+
 export function initDashboard() {
   // Dashboard will be loaded when auth is confirmed
 }
@@ -107,8 +116,10 @@ export async function showDashboard(data) {
               </div>
               <div class="sub-details">
                 <ul class="subscription-features">
-                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 40 daily bananas</li>
+                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 16 daily bananas</li>
                     <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> No minimum cashout</li>
+                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 40 bananas referral bonus</li>
+                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 60 days validity</li>
                 </ul>
                 ${data.subscription === 'basic' || data.subscription === 'hatchling' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" data-plan="hatchling" onclick="purchaseSubscription('hatchling', 199)">Activate Subscription</button>`}
               </div>
@@ -124,8 +135,10 @@ export async function showDashboard(data) {
               </div>
               <div class="sub-details">
                   <ul class="subscription-features">
-                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 180 daily bananas</li>
+                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 50 daily bananas</li>
                     <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> No minimum cashout</li>
+                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 180 bananas referral bonus</li>
+                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 60 days validity</li>
                   </ul>
                   ${data.subscription === 'premium' || data.subscription === 'henhouse' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" data-plan="henhouse" onclick="purchaseSubscription('henhouse', 599)">Activate Subscription</button>`}
               </div>
@@ -141,8 +154,10 @@ export async function showDashboard(data) {
               </div>
               <div class="sub-details">
                   <ul class="subscription-features">
-                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 600 daily bananas</li>
+                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 140 daily bananas</li>
                     <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> No minimum cashout</li>
+                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 600 bananas referral bonus</li>
+                    <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 60 days validity</li>
                   </ul>
                   ${data.subscription === 'vip' || data.subscription === 'goldenfarm' ? '<button class="btn-subscription active" disabled>Current Subscription</button>' : `<button class="btn-subscription" data-plan="goldenfarm" onclick="purchaseSubscription('goldenfarm', 1499)">Activate Subscription</button>`}
               </div>
@@ -658,15 +673,6 @@ window.purchaseSubscription = async function (plan, price) {
   } catch (e) { console.error('Settings fetch failed', e) }
 
   const pm = settings.payment_methods || {}
-
-  const planNames = {
-    'basic': 'HATCHLING',
-    'premium': 'HEN HOUSE',
-    'vip': 'GOLDEN FARM',
-    'hatchling': 'HATCHLING',
-    'henhouse': 'HEN HOUSE',
-    'goldenfarm': 'GOLDEN FARM'
-  }
   const displayName = planNames[plan.toLowerCase()] || plan.toUpperCase()
 
   const modal = document.createElement('div')
