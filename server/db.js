@@ -515,29 +515,36 @@ function updateSubscriptionRequestStatus(id, status, reason) {
   db.prepare("UPDATE subscription_requests SET status = ?, rejection_reason = ?, processed_at = ? WHERE id = ?").run(status, reason || null, now, id);
 
   if (status === 'approved') {
+    // Determine welcome banana bonus (first-day allotment)
     let bonus = 0;
     if (req.plan === 'basic' || req.plan === 'hatchling') bonus = 16;
     else if (req.plan === 'premium' || req.plan === 'henhouse') bonus = 50;
     else if (req.plan === 'vip' || req.plan === 'goldenfarm') bonus = 140;
 
-    db.prepare('UPDATE users SET subscription = ?, subscription_purchased_at = ?, bananas = bananas + ?, last_daily_banana = ? WHERE id = ?')
-      .run(req.plan, now, bonus, now, req.userId);
+    // Activate subscription + give welcome bananas.
+    // Do NOT set last_daily_banana here — let users claim their daily bonus on day 1 themselves.
+    db.prepare('UPDATE users SET subscription = ?, subscription_purchased_at = ?, bananas = bananas + ? WHERE id = ?')
+      .run(req.plan, now, bonus, req.userId);
 
-    logBanana(req.userId, bonus, `Subscription Bonus (${req.plan})`, 'daily');
+    logBanana(req.userId, bonus, `Subscription Welcome Bonus (${req.plan})`, 'reward');
 
-    // Referral Bonus Logic
+    // One-time Referral Upgrade Bonus — only pay out once per subscriber (on their FIRST approved subscription)
     const user = getUserById(req.userId);
-    if (user && user.referred_by) {
+    if (user && user.referred_by && !user.referral_bonus_given) {
       const referrer = getUserById(user.referred_by);
       if (referrer && referrer.kyc_status === 'approved') {
+        // Bonus is based on the REFERRER's own subscription plan
         let refBonus = 0;
-        if (req.plan === 'basic' || req.plan === 'hatchling') refBonus = 40;
-        else if (req.plan === 'premium' || req.plan === 'henhouse') refBonus = 180;
-        else if (req.plan === 'vip' || req.plan === 'goldenfarm') refBonus = 600;
+        const referrerPlan = (referrer.subscription || '').toLowerCase();
+        if (referrerPlan === 'basic' || referrerPlan === 'hatchling') refBonus = 40;
+        else if (referrerPlan === 'premium' || referrerPlan === 'henhouse') refBonus = 180;
+        else if (referrerPlan === 'vip' || referrerPlan === 'goldenfarm') refBonus = 600;
 
         if (refBonus > 0) {
           db.prepare('UPDATE users SET bananas = bananas + ?, referrals = referrals + 1 WHERE id = ?').run(refBonus, referrer.id);
-          logBanana(referrer.id, refBonus, `Referral Upgrade Bonus (${req.plan})`, 'referral');
+          logBanana(referrer.id, refBonus, `Referral Upgrade Bonus (${referrerPlan})`, 'referral');
+          // Mark that this user's referral bonus has been paid out (one-time only)
+          db.prepare('UPDATE users SET referral_bonus_given = 1 WHERE id = ?').run(req.userId);
         }
       }
     }

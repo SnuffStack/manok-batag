@@ -39,7 +39,9 @@ try {
         'ALTER TABLE kyc ADD COLUMN idNumber TEXT',
         'ALTER TABLE kyc ADD COLUMN idType TEXT',
         // Subscription requests additions
-        'ALTER TABLE subscription_requests ADD COLUMN receipt_url TEXT'
+        'ALTER TABLE subscription_requests ADD COLUMN receipt_url TEXT',
+        // Referral bonus one-time guard
+        'ALTER TABLE users ADD COLUMN referral_bonus_given INTEGER DEFAULT 0'
     ];
 
     migrations.forEach(sql => {

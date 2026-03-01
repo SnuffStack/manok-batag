@@ -227,9 +227,9 @@ export async function showDashboard(data) {
             <p>The funniest way to earn</p>
           </div>
           <div class="footer-links">
-            <a href="#">Privacy Policy</a>
-            <a href="#">Terms of Service</a>
-            <a href="#">Support</a>
+            <a href="#" onclick="showPrivacyPolicy(event)">Privacy Policy</a>
+            <a href="#" onclick="showTermsOfService(event)">Terms of Service</a>
+            <a href="#" onclick="showSupport(event)">Support</a>
           </div>
           <div class="footer-bottom">
             <p>&copy; 2026 Chicken Banana. All rights reserved.</p>
@@ -924,7 +924,7 @@ async function checkDailyBananas() {
   // Check locally first to avoid unnecessary calls (optimization)
   const lastDaily = userData.last_daily_banana ? new Date(userData.last_daily_banana) : null
   const now = new Date()
-  if (lastDaily && lastDaily.getDate() === now.getDate() && lastDaily.getFullYear() === now.getFullYear()) {
+  if (lastDaily && lastDaily.getDate() === now.getDate() && lastDaily.getMonth() === now.getMonth() && lastDaily.getFullYear() === now.getFullYear()) {
     return // already claimed today
   }
 
@@ -1018,3 +1018,291 @@ window.toggleMute = function () {
   localStorage.setItem('chicken_muted', isMuted)
   updateMuteIcon()
 }
+
+window.showTermsOfService = function (e) {
+  if (e) e.preventDefault()
+  const existing = document.getElementById('tos-modal')
+  if (existing) existing.remove()
+
+  const modal = document.createElement('div')
+  modal.id = 'tos-modal'
+  modal.className = 'modal-overlay active'
+  modal.style.cssText = 'z-index: 2000;'
+  modal.innerHTML = `
+    <div class="modal-card" style="max-width: 700px; max-height: 85vh; display: flex; flex-direction: column; padding: 0; overflow: hidden;">
+      <div class="modal-header" style="padding: 20px 24px; border-bottom: 1px solid #eee; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;">
+        <div>
+          <h2 style="margin: 0; font-size: 1.3rem;">📜 Terms of Service</h2>
+          <p style="margin: 4px 0 0; font-size: 12px; color: #888;">Last Updated: February 28, 2026</p>
+        </div>
+        <button class="modal-close" onclick="document.getElementById('tos-modal').remove()">&times;</button>
+      </div>
+      <div style="overflow-y: auto; padding: 24px; flex: 1; font-size: 14px; line-height: 1.7; color: #333;">
+
+        <p>Welcome to <strong>Chicken Banana!</strong></p>
+        <p>These Terms of Service ("Terms") govern your use of the Chicken Banana mobile application and website (the "Platform"). By creating an account, accessing the Platform, or clicking "I Agree," you enter into a legally binding agreement with Chicken Banana Corp. ("Company," "we," "our," "us").</p>
+
+        <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 16px; border-radius: 6px; margin: 16px 0;">
+          <strong>⚠️ IMPORTANT: ARBITRATION NOTICE AND CLASS ACTION WAIVER</strong><br>
+          PLEASE READ THESE TERMS CAREFULLY. THEY CONTAIN A MANDATORY ARBITRATION AGREEMENT AND CLASS ACTION WAIVER THAT AFFECTS YOUR RIGHTS. YOU AGREE THAT DISPUTES BETWEEN US WILL BE RESOLVED BY BINDING, INDIVIDUAL ARBITRATION, AND YOU WAIVE YOUR RIGHT TO PARTICIPATE IN A CLASS ACTION LAWSUIT OR CLASS-WIDE ARBITRATION.
+        </div>
+
+        <p>If you do not agree to these Terms, you must not access or use the Platform.</p>
+
+        <h3 style="color: var(--primary-green); margin-top: 24px; border-bottom: 1px solid #eee; padding-bottom: 6px;">1. Eligibility and Account Registration</h3>
+
+        <h4 style="margin: 12px 0 6px;">1.1 Age Requirement</h4>
+        <p>You must be at least <strong>18 years old</strong> to register for or use the Platform. By registering, you represent and warrant that you are 18 years or older.</p>
+
+        <h4 style="margin: 12px 0 6px;">1.2 Account Registration</h4>
+        <p>To access features such as earning, withdrawing, or referring friends, you must create an account. You agree to:</p>
+        <ul style="margin: 6px 0 6px 20px;">
+          <li>Provide accurate, current, and complete information.</li>
+          <li>Maintain the security of your password and login credentials.</li>
+          <li>Notify us immediately of any unauthorized use of your account.</li>
+        </ul>
+        <p>You are responsible for all activities that occur under your account.</p>
+
+        <h4 style="margin: 12px 0 6px;">1.3 One Account Per User</h4>
+        <p>Users may not maintain more than one account. Duplicate accounts may result in the suspension of all associated accounts and forfeiture of balances.</p>
+
+        <h3 style="color: var(--primary-green); margin-top: 24px; border-bottom: 1px solid #eee; padding-bottom: 6px;">2. The Farm-to-Earn Service</h3>
+        <p>Chicken Banana is a gamified platform that allows users to interact with a virtual farm.</p>
+
+        <h4 style="margin: 12px 0 6px;">2.1 Virtual Currency</h4>
+        <p>The Platform utilizes two forms of virtual currency: <strong>Bananas</strong> (used for feeding) and <strong>Eggs</strong> (earned by feeding).</p>
+        <ul style="margin: 6px 0 6px 20px;">
+          <li>Bananas and Eggs have no monetary value outside the Platform.</li>
+          <li>They cannot be sold, traded, or transferred to other users.</li>
+          <li>They are a limited license to access the gameplay mechanics, not a store of value.</li>
+        </ul>
+
+        <h4 style="margin: 12px 0 6px;">2.2 User Balance and Withdrawals</h4>
+        <ul style="margin: 6px 0 6px 20px;">
+          <li>Your "Balance" (displayed in ₱) represents the real-world value associated with the Eggs you have earned, based on the current in-game exchange rate.</li>
+          <li><strong>Withdrawals:</strong> You may request a withdrawal of your Balance to a verified GCash or Maya account, subject to a minimum withdrawal amount (if any) as displayed in the app.</li>
+          <li><strong>Processing:</strong> Withdrawals are processed within a reasonable timeframe. The Company reserves the right to delay withdrawals for security reviews or to investigate suspicious activity.</li>
+        </ul>
+
+        <h4 style="margin: 12px 0 6px;">2.3 Subscriptions</h4>
+        <p>To enhance earnings, users may purchase recurring subscriptions (Hatchling, Hen House, Golden Farm).</p>
+        <ul style="margin: 6px 0 6px 20px;">
+          <li><strong>Billing:</strong> Subscriptions are billed monthly (₱199, ₱599, ₱1,499) and auto-renew unless canceled at least 24 hours before the end of the current period.</li>
+          <li><strong>Cancellation:</strong> You can manage and cancel your subscriptions via your account settings or the app store (if applicable). No refunds are provided for partial billing periods.</li>
+        </ul>
+
+        <h3 style="color: var(--primary-green); margin-top: 24px; border-bottom: 1px solid #eee; padding-bottom: 6px;">3. Referral Program</h3>
+
+        <h4 style="margin: 12px 0 6px;">3.1 Referral Links</h4>
+        <p>Users who have completed KYC verification may receive a unique referral link to invite friends.</p>
+
+        <h4 style="margin: 12px 0 6px;">3.2 Rewards</h4>
+        <p>You will earn <strong>1 Banana</strong> for each friend who signs up using your link and completes the account registration process.</p>
+
+        <h4 style="margin: 12px 0 6px;">3.3 Prohibited Conduct</h4>
+        <p>We strictly prohibit spam, the use of bots, fake accounts, or any fraudulent activity to generate referrals. Violation of this rule will result in the forfeiture of referral rewards and possible account termination.</p>
+
+        <h3 style="color: var(--primary-green); margin-top: 24px; border-bottom: 1px solid #eee; padding-bottom: 6px;">4. KYC (Know Your Customer) Verification</h3>
+        <p>To unlock the referral feature and comply with financial regulations, users must complete KYC verification.</p>
+
+        <h4 style="margin: 12px 0 6px;">4.1 Information Required</h4>
+        <p>You agree to provide accurate government-issued identification and other information requested by us or our third-party verification providers.</p>
+
+        <h4 style="margin: 12px 0 6px;">4.2 Verification Failure</h4>
+        <p>If you fail KYC verification, you will not be able to refer friends, and your withdrawal limits may be restricted. Providing false information is a breach of these Terms.</p>
+
+        <h3 style="color: var(--primary-green); margin-top: 24px; border-bottom: 1px solid #eee; padding-bottom: 6px;">5. User Conduct and Prohibited Activities</h3>
+        <p>You agree not to engage in any of the following prohibited activities:</p>
+        <ul style="margin: 6px 0 6px 20px;">
+          <li><strong>Cheating:</strong> Using bots, scripts, or automated software to interact with the game (e.g., auto-feeding chickens).</li>
+          <li><strong>Fraud:</strong> Creating multiple accounts to abuse the referral program or sign-up bonuses.</li>
+          <li><strong>Manipulation:</strong> Exploiting any bug, glitch, or error in the Platform to earn unauthorized currency or balances. If a glitch is discovered, you must report it immediately. Exploitation may result in balance forfeiture and account suspension.</li>
+          <li><strong>Illegal Activity:</strong> Using the Platform for money laundering or any unlawful purpose.</li>
+        </ul>
+
+        <h3 style="color: var(--primary-green); margin-top: 24px; border-bottom: 1px solid #eee; padding-bottom: 6px;">6. No Refund Policy</h3>
+        <p>All purchases of virtual currency (Bananas) and subscriptions are <strong>final and non-refundable</strong>. Because digital content is consumed upon use, we do not offer refunds for any in-app purchases, except where required by applicable law.</p>
+
+        <h3 style="color: var(--primary-green); margin-top: 24px; border-bottom: 1px solid #eee; padding-bottom: 6px;">7. Intellectual Property Rights</h3>
+
+        <h4 style="margin: 12px 0 6px;">7.1 Our IP</h4>
+        <p>The Platform, including all content, graphics, UI design, code, and branding, is the exclusive property of Chicken Banana Corp. and is protected by applicable intellectual property laws. You may not reproduce, distribute, or create derivative works without our express written permission.</p>
+
+        <p style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #eee; font-size: 12px; color: #888; text-align: center;">
+          © 2026 Chicken Banana Corp. All rights reserved.
+        </p>
+      </div>
+      <div style="padding: 16px 24px; border-top: 1px solid #eee; flex-shrink: 0; text-align: right;">
+        <button onclick="document.getElementById('tos-modal').remove()" style="padding: 10px 28px; background: var(--primary-green, #4CAF50); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
+          Close
+        </button>
+      </div>
+    </div>
+  `
+  // Close when clicking the backdrop
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal) modal.remove()
+  })
+  document.body.appendChild(modal)
+}
+
+window.showPrivacyPolicy = function (e) {
+  if (e) e.preventDefault()
+  const existing = document.getElementById('privacy-modal')
+  if (existing) existing.remove()
+
+  const modal = document.createElement('div')
+  modal.id = 'privacy-modal'
+  modal.className = 'modal-overlay active'
+  modal.style.cssText = 'z-index: 2000;'
+  modal.innerHTML = `
+    <div class="modal-card" style="max-width: 700px; max-height: 85vh; display: flex; flex-direction: column; padding: 0; overflow: hidden;">
+      <div class="modal-header" style="padding: 20px 24px; border-bottom: 1px solid #eee; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;">
+        <div>
+          <h2 style="margin: 0; font-size: 1.3rem;">🔒 Privacy Policy</h2>
+          <p style="margin: 4px 0 0; font-size: 12px; color: #888;">Last Updated: February 28, 2026</p>
+        </div>
+        <button class="modal-close" onclick="document.getElementById('privacy-modal').remove()">&times;</button>
+      </div>
+      <div style="overflow-y: auto; padding: 24px; flex: 1; font-size: 14px; line-height: 1.7; color: #333;">
+
+        <p>Chicken Banana Corp. ("Company," "we," "our," "us") is committed to protecting your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our Platform.</p>
+
+        <h3 style="color: var(--primary-green); margin-top: 24px; border-bottom: 1px solid #eee; padding-bottom: 6px;">1. Information We Collect</h3>
+
+        <h4 style="margin: 12px 0 6px;">1.1 Information You Provide</h4>
+        <ul style="margin: 6px 0 6px 20px;">
+          <li><strong>Account Information:</strong> Name, mobile number, email address, and password when you register.</li>
+          <li><strong>KYC Information:</strong> Government-issued ID, selfie photo, and personal details for identity verification.</li>
+          <li><strong>Payment Information:</strong> GCash, Maya, or GoTyme account name and number for processing withdrawals.</li>
+          <li><strong>Transaction Data:</strong> Records of your feeding activity, egg sales, cashouts, and subscription purchases.</li>
+        </ul>
+
+        <h4 style="margin: 12px 0 6px;">1.2 Information Collected Automatically</h4>
+        <ul style="margin: 6px 0 6px 20px;">
+          <li>Device information (device type, operating system, browser).</li>
+          <li>IP address and approximate location.</li>
+          <li>Usage data (pages visited, features used, timestamps).</li>
+        </ul>
+
+        <h3 style="color: var(--primary-green); margin-top: 24px; border-bottom: 1px solid #eee; padding-bottom: 6px;">2. How We Use Your Information</h3>
+        <ul style="margin: 6px 0 6px 20px;">
+          <li>To operate, maintain, and improve the Platform.</li>
+          <li>To process wallet withdrawals and subscription payments.</li>
+          <li>To verify your identity through KYC and comply with financial regulations.</li>
+          <li>To detect, investigate, and prevent fraud, cheating, or abuse.</li>
+          <li>To send you important account notifications and updates.</li>
+          <li>To respond to your support requests and inquiries.</li>
+        </ul>
+
+        <h3 style="color: var(--primary-green); margin-top: 24px; border-bottom: 1px solid #eee; padding-bottom: 6px;">3. Sharing of Information</h3>
+        <p>We do <strong>not</strong> sell your personal information. We may share your data only in these circumstances:</p>
+        <ul style="margin: 6px 0 6px 20px;">
+          <li><strong>Service Providers:</strong> Third-party KYC verification providers and payment processors who assist us in operating the Platform.</li>
+          <li><strong>Legal Compliance:</strong> Government or regulatory authorities when required by law or court order.</li>
+          <li><strong>Fraud Prevention:</strong> To protect the rights, property, or safety of the Company, our users, or the public.</li>
+        </ul>
+
+        <h3 style="color: var(--primary-green); margin-top: 24px; border-bottom: 1px solid #eee; padding-bottom: 6px;">4. Data Retention</h3>
+        <p>We retain your personal information for as long as your account is active or as needed to provide services. KYC data and transaction records may be retained for up to <strong>5 years</strong> to comply with legal and regulatory obligations. You may request deletion of your account and associated data by contacting our support team.</p>
+
+        <h3 style="color: var(--primary-green); margin-top: 24px; border-bottom: 1px solid #eee; padding-bottom: 6px;">5. Data Security</h3>
+        <p>We implement industry-standard security measures, including encrypted data storage and secure HTTPS connections, to protect your information. However, no method of electronic transmission or storage is 100% secure. We encourage you to use a strong, unique password and to keep your login credentials private.</p>
+
+        <h3 style="color: var(--primary-green); margin-top: 24px; border-bottom: 1px solid #eee; padding-bottom: 6px;">6. Your Rights</h3>
+        <p>You have the right to:</p>
+        <ul style="margin: 6px 0 6px 20px;">
+          <li><strong>Access:</strong> Request a copy of the personal data we hold about you.</li>
+          <li><strong>Correction:</strong> Ask us to correct inaccurate or incomplete data.</li>
+          <li><strong>Deletion:</strong> Request the deletion of your account and personal data, subject to legal retention requirements.</li>
+          <li><strong>Objection:</strong> Object to certain types of data processing.</li>
+        </ul>
+        <p>To exercise any of these rights, please contact us at our support channels listed in the Support section.</p>
+
+        <h3 style="color: var(--primary-green); margin-top: 24px; border-bottom: 1px solid #eee; padding-bottom: 6px;">7. Cookies</h3>
+        <p>The Platform uses session cookies and local storage to keep you logged in and remember your preferences. These are essential for the Platform to function properly. By using the Platform, you consent to our use of cookies.</p>
+
+        <h3 style="color: var(--primary-green); margin-top: 24px; border-bottom: 1px solid #eee; padding-bottom: 6px;">8. Changes to This Policy</h3>
+        <p>We may update this Privacy Policy from time to time. We will notify you of any significant changes by posting the new policy on the Platform with an updated "Last Updated" date. Continued use of the Platform after changes constitutes your acceptance of the updated policy.</p>
+
+        <p style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #eee; font-size: 12px; color: #888; text-align: center;">
+          © 2026 Chicken Banana Corp. All rights reserved.
+        </p>
+      </div>
+      <div style="padding: 16px 24px; border-top: 1px solid #eee; flex-shrink: 0; text-align: right;">
+        <button onclick="document.getElementById('privacy-modal').remove()" style="padding: 10px 28px; background: var(--primary-green, #4CAF50); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
+          Close
+        </button>
+      </div>
+    </div>
+  `
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal) modal.remove()
+  })
+  document.body.appendChild(modal)
+}
+
+window.showSupport = function (e) {
+  if (e) e.preventDefault()
+  const existing = document.getElementById('support-modal')
+  if (existing) existing.remove()
+
+  const modal = document.createElement('div')
+  modal.id = 'support-modal'
+  modal.className = 'modal-overlay active'
+  modal.style.cssText = 'z-index: 2000;'
+  modal.innerHTML = `
+    <div class="modal-card" style="max-width: 480px; display: flex; flex-direction: column; padding: 0; overflow: hidden;">
+      <div class="modal-header" style="padding: 20px 24px; border-bottom: 1px solid #eee; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;">
+        <div>
+          <h2 style="margin: 0; font-size: 1.3rem;">💬 Support</h2>
+          <p style="margin: 4px 0 0; font-size: 12px; color: #888;">We're here to help!</p>
+        </div>
+        <button class="modal-close" onclick="document.getElementById('support-modal').remove()">&times;</button>
+      </div>
+      <div style="padding: 28px 24px; font-size: 14px; line-height: 1.7; color: #333;">
+
+        <p style="margin: 0 0 24px; color: #555;">Have questions, issues, or concerns? Reach out to us through any of the channels below and our team will get back to you as soon as possible.</p>
+
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+
+          <a href="mailto:support@chickenbananacorp.com" style="display: flex; align-items: center; gap: 16px; background: #f0faf0; border: 1.5px solid #c8e6c9; border-radius: 12px; padding: 16px 20px; text-decoration: none; color: inherit; transition: box-shadow 0.2s;"
+             onmouseover="this.style.boxShadow='0 4px 12px rgba(76,175,80,0.15)'" onmouseout="this.style.boxShadow='none'">
+            <div style="width: 44px; height: 44px; background: #4CAF50; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">✉️</div>
+            <div>
+              <div style="font-weight: 700; color: #2e7d32; font-size: 15px;">Email Support</div>
+              <div style="font-size: 13px; color: #555;">support@chickenbananacorp.com</div>
+              <div style="font-size: 11px; color: #999; margin-top: 2px;">Response within 24–48 hours</div>
+            </div>
+          </a>
+
+          <a href="https://www.facebook.com/ChickenBananaCorp" target="_blank" rel="noopener noreferrer"
+             style="display: flex; align-items: center; gap: 16px; background: #f0f4ff; border: 1.5px solid #c5cae9; border-radius: 12px; padding: 16px 20px; text-decoration: none; color: inherit; transition: box-shadow 0.2s;"
+             onmouseover="this.style.boxShadow='0 4px 12px rgba(63,81,181,0.15)'" onmouseout="this.style.boxShadow='none'">
+            <div style="width: 44px; height: 44px; background: #1877F2; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">📘</div>
+            <div>
+              <div style="font-weight: 700; color: #1877F2; font-size: 15px;">Facebook Page</div>
+              <div style="font-size: 13px; color: #555;">@ChickenBananaCorp</div>
+              <div style="font-size: 11px; color: #999; margin-top: 2px;">Message us on Facebook</div>
+            </div>
+          </a>
+
+        </div>
+
+        <p style="margin: 24px 0 0; font-size: 12px; color: #aaa; text-align: center;">
+          🕐 Support hours: Monday – Saturday, 9:00 AM – 6:00 PM (PHT)
+        </p>
+      </div>
+      <div style="padding: 16px 24px; border-top: 1px solid #eee; flex-shrink: 0; text-align: right;">
+        <button onclick="document.getElementById('support-modal').remove()" style="padding: 10px 28px; background: var(--primary-green, #4CAF50); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
+          Close
+        </button>
+      </div>
+    </div>
+  `
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal) modal.remove()
+  })
+  document.body.appendChild(modal)
+}
+
