@@ -38,10 +38,9 @@ try {
         'ALTER TABLE kyc ADD COLUMN birthdate TEXT',
         'ALTER TABLE kyc ADD COLUMN idNumber TEXT',
         'ALTER TABLE kyc ADD COLUMN idType TEXT',
-        // Subscription requests additions
-        'ALTER TABLE subscription_requests ADD COLUMN receipt_url TEXT',
-        // Referral bonus one-time guard
-        'ALTER TABLE users ADD COLUMN referral_bonus_given INTEGER DEFAULT 0'
+        'ALTER TABLE users ADD COLUMN referral_bonus_given INTEGER DEFAULT 0',
+        'ALTER TABLE users ADD COLUMN has_subscribed INTEGER DEFAULT 0',
+        'ALTER TABLE users ADD COLUMN manual_activation INTEGER DEFAULT 0'
     ];
 
     migrations.forEach(sql => {
@@ -160,6 +159,26 @@ app.post('/api/login', authLimiter, (req, res) => {
         }
 
         if (!isValid) return res.status(401).json({ error: 'Invalid credentials' });
+
+        // Logic for 10-day expiry for free accounts
+        const isFree = !user.subscription || user.subscription === 'None';
+        const neverSubscribed = !user.has_subscribed;
+        const notManuallyActivated = !user.manual_activation;
+        const isNotAdmin = !user.is_admin;
+
+        if (isFree && neverSubscribed && notManuallyActivated && isNotAdmin) {
+            const createdAt = new Date(user.created_at);
+            const now = new Date();
+            const diffTime = Math.abs(now - createdAt);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays > 10) {
+                return res.status(403).json({
+                    error: 'Account Expired: Free account limited to 10 days. Please contact admin to activate or purchase a subscription.',
+                    is_expired: true
+                });
+            }
+        }
 
         res.json({ user });
     } catch (error) {
@@ -447,6 +466,26 @@ app.post('/api/admin/toggle', (req, res) => {
         const { userId, isAdmin } = req.body;
         const user = db.toggleAdmin(userId, isAdmin);
         if (!user) return res.status(404).json({ error: 'User not found' });
+        res.json({ user });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/admin/banned-users', (req, res) => {
+    try {
+        const users = db.getBannedUsers();
+        res.json({ users });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/admin/activate-user', (req, res) => {
+    try {
+        const { userId } = req.body;
+        if (!userId) return res.status(400).json({ error: 'userId required' });
+        const user = db.activateUser(userId);
         res.json({ user });
     } catch (error) {
         res.status(500).json({ error: error.message });

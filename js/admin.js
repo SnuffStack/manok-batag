@@ -110,6 +110,7 @@ export async function showAdminPanel() {
           <a data-section="kyc" onclick="showAdminSection('kyc', event)"><span>📋</span>KYC Pending <span class="nav-badge" id="nav-kyc-count" style="display:none">0</span></a>
           <a data-section="cashouts" onclick="showAdminSection('cashouts', event)"><span>💰</span>Cashouts <span class="nav-badge" id="nav-cash-count" style="display:none">0</span></a>
           <a data-section="subscriptions" onclick="showAdminSection('subscriptions', event)"><span>💎</span>Subscriptions <span class="nav-badge" id="nav-sub-count" style="display:none">0</span></a>
+          <a data-section="banned" onclick="showAdminSection('banned', event)"><span>🚫</span>Banned Accounts</a>
           <a data-section="admins" onclick="showAdminSection('admins', event)"><span>🔑</span>Admins</a>
         </nav>
       </div>
@@ -216,6 +217,8 @@ window.showAdminSection = async function (section, event) {
     await loadCashouts()
   } else if (section === 'subscriptions') {
     await loadSubscriptions()
+  } else if (section === 'banned') {
+    await loadBannedAccounts()
   } else if (section === 'admins') {
     await loadAdmins()
   }
@@ -1586,6 +1589,10 @@ function openEditUserModal(userId) {
         <label>Referral code</label>
         <input id="edit-referral" value="${u.referral_code || ''}" />
       </div>
+      <div class="form-group">
+        <label>New Password (leave empty to keep current)</label>
+        <input id="edit-password" type="password" placeholder="Enter new password" />
+      </div>
       <div id="edit-user-error" class="error-message" style="display:none"></div>
     </form>
   `
@@ -1611,6 +1618,7 @@ async function saveEditUser(userId) {
   const subscription = (document.getElementById('edit-subscription').value || '').trim() || 'None'
   let referral_code = (document.getElementById('edit-referral').value || '').trim() || null
   if (referral_code) referral_code = referral_code.toUpperCase()
+  const password = document.getElementById('edit-password').value
 
   const errorEl = document.getElementById('edit-user-error')
   if (!email) { if (errorEl) { errorEl.textContent = 'User identifier (Email/Phone) is required.'; errorEl.style.display = 'block' } return }
@@ -1619,18 +1627,24 @@ async function saveEditUser(userId) {
   // clear errors
   if (errorEl) { errorEl.textContent = ''; errorEl.style.display = 'none' }
 
+  const updateData = {
+    email,
+    bananas,
+    eggs,
+    balance,
+    subscription,
+    referral_code
+  }
+
+  if (password) {
+    updateData.password = password
+  }
+
   try {
     const resp = await fetch(`/api/users/${u.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email,
-        bananas,
-        eggs,
-        balance,
-        subscription,
-        referral_code
-      })
+      body: JSON.stringify(updateData)
     })
 
     if (!resp.ok) {
@@ -1909,3 +1923,91 @@ window.toggleGlobalSettings = function () {
     }
   }
 }
+
+async function loadBannedAccounts() {
+  const content = document.getElementById('admin-content')
+  content.innerHTML = '<div class="loading">Loading banned accounts...</div>'
+
+  try {
+    const resp = await fetch('/api/admin/banned-users')
+    if (!resp.ok) throw new Error('Failed to fetch banned users')
+    const { users } = await resp.json()
+
+    if (!users || users.length === 0) {
+      content.innerHTML = `
+        <div class="panel-card">
+          <div class="panel-header"><h2>🚫 Banned Accounts (0)</h2></div>
+          <div class="panel-body">
+            <div class="admin-empty-state"><p>No users are currently banned due to expiry.</p></div>
+          </div>
+        </div>
+      `
+      return
+    }
+
+    content.innerHTML = `
+      <div class="panel-card">
+        <div class="panel-header">
+          <h2>🚫 Banned Accounts (${users.length})</h2>
+          <p style="font-size: 13px; color: #666; margin-top: 4px;">These are free accounts older than 10 days that haven't subscribed.</p>
+        </div>
+        <div class="panel-body">
+          <div class="admin-table-container">
+            <div class="admin-table-wrapper">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Signed Up</th>
+                    <th>Age (Days)</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${users.map(u => {
+      const age = Math.ceil((new Date() - new Date(u.created_at)) / (1000 * 60 * 60 * 24))
+      return `
+                    <tr>
+                      <td><strong>${u.email}</strong></td>
+                      <td>${new Date(u.created_at).toLocaleDateString()}</td>
+                      <td>${age} days</td>
+                      <td>
+                        <button class="btn btn-success btn-sm" onclick="activateUserAccount('${u.id}')">ACTIVATE</button>
+                      </td>
+                    </tr>
+                  `
+    }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    `
+  } catch (e) {
+    content.innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`
+  }
+}
+
+window.activateUserAccount = async function (userId) {
+  if (!confirm('Are you sure you want to manually activate this account?')) return
+
+  try {
+    const resp = await fetch('/api/admin/activate-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId })
+    })
+
+    if (resp.ok) {
+      showToast('Account activated successfully', 'success')
+      loadBannedAccounts() // Refresh list
+    } else {
+      const err = await resp.json()
+      showToast(err.error || 'Activation failed', 'error')
+    }
+  } catch (e) {
+    showToast(e.message, 'error')
+  }
+}
+

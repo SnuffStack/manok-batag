@@ -72,3 +72,292 @@
         color: inherit;
     }
 }
+
+/* =============================================
+   SUBSCRIPTION TIER BACKGROUNDS FOR FARM AREA
+   ============================================= */
+
+/* Override the global display:none on .grassy-field::before for subscription tiers if needed, 
+   but we'll use background images now */
+.farm-section.card.sub-bg-hatchling::before,
+.farm-section.card.sub-bg-henhouse::before,
+.farm-section.card.sub-bg-goldenfarm::before,
+.farm-section.card.sub-bg-hatchling::after,
+.farm-section.card.sub-bg-henhouse::after,
+.farm-section.card.sub-bg-goldenfarm::after {
+    display: none !important;
+    /* Hide old emojis */
+}
+
+/* Ensure inner field is transparent when card has a background image */
+.farm-section.card[class*="sub-bg-"] .grassy-field {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Text visibility improvements for themed cards */
+.farm-section.card[class*="sub-bg-"] .card-title,
+.farm-section.card[class*="sub-bg-"] .card-subtitle,
+.farm-section.card[class*="sub-bg-"] .status-text {
+    color: #fff !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.farm-section.card[class*="sub-bg-"] .card-header {
+    background: transparent;
+    padding: 10px 15px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    width: fit-content;
+}
+
+/* --- HATCHLING: Simple wooden coop --- */
+.farm-section.card.sub-bg-hatchling {
+    background-image: url('Hatchling.png') !important;
+    background-size: cover;
+    background-position: center;
+    border: 2.5px solid #f59e0b;
+    box-shadow: 0 0 18px rgba(251, 191, 36, 0.45), inset 0 0 30px rgba(253, 230, 138, 0.2);
+    position: relative;
+    padding: 24px;
+}
+
+/* --- HEN HOUSE: Improved red barn --- */
+.farm-section.card.sub-bg-henhouse {
+    background-image: url('Hen House.png') !important;
+    background-size: cover;
+    background-position: center;
+    border: 2.5px solid #38bdf8;
+    box-shadow: 0 0 22px rgba(56, 189, 248, 0.4), inset 0 0 30px rgba(186, 230, 253, 0.15);
+    position: relative;
+    padding: 24px;
+}
+
+/* --- GOLDEN FARM: Golden palace --- */
+.farm-section.card.sub-bg-goldenfarm {
+    background-image: url('Golden Farm.png') !important;
+    background-size: cover;
+    background-position: center;
+    border: 2.5px solid #d97706;
+    box-shadow: 0 0 28px rgba(245, 158, 11, 0.6), inset 0 0 40px rgba(253, 230, 138, 0.2);
+    animation: goldPulse 2.5s ease-in-out infinite;
+    position: relative;
+    padding: 24px;
+}
+
+
+@keyframes goldPulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 28px rgba(245, 158, 11, 0.6), inset 0 0 40px rgba(253, 230, 138, 0.2);
+    }
+
+    50% {
+        box-shadow: 0 0 45px rgba(245, 158, 11, 0.9), inset 0 0 50px rgba(253, 230, 138, 0.35);
+    }
+}
+
+@keyframes trophyGlow {
+
+    0%,
+    100% {
+        filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.7));
+    }
+
+    50% {
+        filter: drop-shadow(0 0 16px rgba(251, 191, 36, 1));
+    }
+}
+
+/* =============================================
+   TIER BADGE LABEL
+   ============================================= */
+.farm-tier-badge {
+    position: absolute;
+    bottom: 10px;
+    right: 12px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    padding: 4px 10px;
+    border-radius: 20px;
+    z-index: 5;
+    pointer-events: none;
+    text-transform: uppercase;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.hatchling-badge {
+    background: rgba(251, 191, 36, 0.9);
+    color: #78350f;
+    border: 1.5px solid #f59e0b;
+}
+
+.henhouse-badge {
+    background: rgba(56, 189, 248, 0.9);
+    color: #0c4a6e;
+    border: 1.5px solid #0ea5e9;
+}
+
+.goldenfarm-badge {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: #1c1917;
+    border: 1.5px solid #d97706;
+    animation: badgeShimmer 2s ease-in-out infinite;
+}
+
+@keyframes badgeShimmer {
+
+    0%,
+    100% {
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    50% {
+        box-shadow: 0 2px 14px rgba(245, 158, 11, 0.7);
+    }
+}
+
+/* =============================================
+   SUBSCRIPTION COUNTDOWN WIDGET
+   ============================================= */
+.sub-countdown-wrap {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+.sub-countdown-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.9);
+    text-transform: uppercase;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+.sub-countdown-tiles {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.countdown-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: transparent;
+    border: none;
+    padding: 2px 4px;
+    min-width: 28px;
+}
+
+.countdown-tile span {
+    font-size: 1rem;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7), 0 0 2px rgba(0, 0, 0, 0.9);
+}
+
+.countdown-tile small {
+    font-size: 0.5rem;
+    color: rgba(255, 255, 255, 0.8);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 1px;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+.countdown-sep {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1;
+    padding-bottom: 8px;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+.sub-expiry-date {
+    font-size: 0.58rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-style: italic;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+    text-align: right;
+}
+
+/* Warning state when <= 3 days left */
+.sub-countdown-wrap.expiring-soon .sub-countdown-label {
+    color: #fca5a5;
+}
+
+.sub-countdown-wrap.expiring-soon .countdown-tile span {
+    color: #fca5a5;
+    animation: urgentPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes urgentPulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+
+    50% {
+        box-shadow: 0 0 14px 4px rgba(239, 68, 68, 0.4);
+    }
+}
+
+/* =============================================
+   COUNTDOWN MOBILE RESPONSIVENESS
+   ============================================= */
+@media (max-width: 600px) {
+    .sub-countdown-wrap {
+        top: 10px;
+        right: 10px;
+        gap: 2px;
+    }
+
+    .sub-countdown-label {
+        font-size: 0.48rem;
+    }
+
+    .sub-countdown-tiles {
+        gap: 2px;
+    }
+
+    .countdown-tile {
+        min-width: 20px;
+        padding: 1px 3px;
+    }
+
+    .countdown-tile span {
+        font-size: 0.7rem;
+    }
+
+    .countdown-tile small {
+        font-size: 0.38rem;
+    }
+
+    .countdown-sep {
+        font-size: 0.65rem;
+        padding-bottom: 6px;
+    }
+
+    .sub-expiry-date {
+        font-size: 0.45rem;
+    }
+}

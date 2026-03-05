@@ -15,6 +15,27 @@ export function initDashboard() {
   // Dashboard will be loaded when auth is confirmed
 }
 
+function getSubBgClass(subscription) {
+  if (!subscription) return ''
+  const s = subscription.toLowerCase()
+  if (s === 'hatchling' || s === 'basic') return 'sub-bg-hatchling'
+  if (s === 'henhouse' || s === 'premium') return 'sub-bg-henhouse'
+  if (s === 'goldenfarm' || s === 'vip') return 'sub-bg-goldenfarm'
+  return ''
+}
+
+function getSubBadge(subscription) {
+  if (!subscription) return ''
+  const s = subscription.toLowerCase()
+  if (s === 'hatchling' || s === 'basic')
+    return `<div class="farm-tier-badge hatchling-badge">🐣 HATCHLING</div>`
+  if (s === 'henhouse' || s === 'premium')
+    return `<div class="farm-tier-badge henhouse-badge">🏠 HEN HOUSE</div>`
+  if (s === 'goldenfarm' || s === 'vip')
+    return `<div class="farm-tier-badge goldenfarm-badge">🏆 GOLDEN FARM</div>`
+  return ''
+}
+
 export async function showDashboard(data) {
   // Check if user is admin
   const { isAdmin, showAdminPanel } = await import('./admin.js')
@@ -78,11 +99,25 @@ export async function showDashboard(data) {
           </div>
         </div>
         
-        <div class="farm-section card">
+        <div class="farm-section card ${getSubBgClass(data.subscription)}">
           <div class="card-header">
             <span class="card-title">🐔 Your Farm</span>
             <span class="card-subtitle">Feed your chicken to earn eggs!</span>
           </div>
+          ${data.subscription && data.subscription !== 'None' && data.subscription_purchased_at ? `
+          <div class="sub-countdown-wrap">
+            <div class="sub-countdown-label">⏳ Expires In</div>
+            <div class="sub-countdown-tiles" id="sub-countdown">
+              <div class="countdown-tile"><span id="cd-days">--</span><small>Days</small></div>
+              <div class="countdown-sep">:</div>
+              <div class="countdown-tile"><span id="cd-hours">--</span><small>Hrs</small></div>
+              <div class="countdown-sep">:</div>
+              <div class="countdown-tile"><span id="cd-mins">--</span><small>Min</small></div>
+              <div class="countdown-sep">:</div>
+              <div class="countdown-tile"><span id="cd-secs">--</span><small>Sec</small></div>
+            </div>
+            <div class="sub-expiry-date" id="sub-expiry-date"></div>
+          </div>` : ''}
           <div class="farm-display">
             <div class="grassy-field">
               <div class="chicken-shadow"></div>
@@ -243,6 +278,7 @@ export async function showDashboard(data) {
   loadCashoutHistory()
   checkDailyBananas()
   checkSubscriptionRequests()
+  startSubscriptionCountdown(data.subscription_purchased_at)
 }
 
 async function checkSubscriptionRequests() {
@@ -1306,3 +1342,56 @@ window.showSupport = function (e) {
   document.body.appendChild(modal)
 }
 
+let _countdownInterval = null
+
+function startSubscriptionCountdown(purchasedAt) {
+  if (_countdownInterval) {
+    clearInterval(_countdownInterval)
+    _countdownInterval = null
+  }
+
+  if (!purchasedAt) return
+
+  const DURATION_MS = 60 * 24 * 60 * 60 * 1000 // 60 days
+  const expiryDate = new Date(new Date(purchasedAt).getTime() + DURATION_MS)
+
+  const expiryEl = document.getElementById('sub-expiry-date')
+  if (expiryEl) {
+    const opts = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }
+    expiryEl.textContent = `Expires on ${expiryDate.toLocaleDateString('en-PH', opts)}`
+  }
+
+  function tick() {
+    const diff = expiryDate - new Date()
+    const dEl = document.getElementById('cd-days')
+    const hEl = document.getElementById('cd-hours')
+    const mEl = document.getElementById('cd-mins')
+    const sEl = document.getElementById('cd-secs')
+
+    if (!dEl) { clearInterval(_countdownInterval); _countdownInterval = null; return }
+
+    if (diff <= 0) {
+      dEl.textContent = hEl.textContent = mEl.textContent = sEl.textContent = '00'
+      clearInterval(_countdownInterval); _countdownInterval = null
+      const lbl = document.querySelector('.sub-countdown-label')
+      if (lbl) lbl.textContent = '⚠️ Subscription Expired!'
+      return
+    }
+
+    const days = Math.floor(diff / 86400000)
+    const hours = Math.floor((diff % 86400000) / 3600000)
+    const minutes = Math.floor((diff % 3600000) / 60000)
+    const seconds = Math.floor((diff % 60000) / 1000)
+
+    dEl.textContent = String(days).padStart(2, '0')
+    hEl.textContent = String(hours).padStart(2, '0')
+    mEl.textContent = String(minutes).padStart(2, '0')
+    sEl.textContent = String(seconds).padStart(2, '0')
+
+    const wrap = document.querySelector('.sub-countdown-wrap')
+    if (wrap) wrap.classList.toggle('expiring-soon', days < 3)
+  }
+
+  tick()
+  _countdownInterval = setInterval(tick, 1000)
+}

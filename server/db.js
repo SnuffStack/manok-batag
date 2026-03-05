@@ -39,7 +39,9 @@ function init() {
       admin_granted_at TEXT,
       admin_revoked_at TEXT,
       kyc_document_url TEXT,
-      kyc_id_type TEXT
+      kyc_id_type TEXT,
+      has_subscribed INTEGER DEFAULT 0,
+      manual_activation INTEGER DEFAULT 0
     );
 
     -- Performance Indexes for 10k+ users
@@ -175,10 +177,43 @@ function updateUser(id, fields) {
   const keys = Object.keys(fields);
   if (keys.length === 0) return getUserById(id);
 
+  // Hash password if updating it
+  if (fields.password) {
+    fields.password = bcrypt.hashSync(fields.password, 10);
+  }
+
   const setClause = keys.map(key => `${key} = ?`).join(', ');
   const values = Object.values(fields);
   db.prepare(`UPDATE users SET ${setClause} WHERE id = ?`).run(...values, id);
   return getUserById(id);
+}
+
+function toggleAdmin(userId, isAdmin) {
+  db.prepare('UPDATE users SET is_admin = ? WHERE id = ?').run(isAdmin ? 1 : 0, userId);
+  return getUserById(userId);
+}
+
+function getBannedUsers() {
+  // Banned = (No sub AND Never subbed AND Not manually activated) AND (Created > 10 days ago)
+  const users = db.prepare(`
+    SELECT * FROM users 
+    WHERE (subscription IS NULL OR subscription = 'None') 
+    AND (has_subscribed = 0) 
+    AND (manual_activation = 0)
+    AND (is_admin = 0 OR is_admin IS NULL)
+    AND (julianday('now') - julianday(created_at) > 10)
+  `).all();
+
+  return users.map(u => {
+    u.has_subscribed = !!u.has_subscribed;
+    u.manual_activation = !!u.manual_activation;
+    return u;
+  });
+}
+
+function activateUser(userId) {
+  db.prepare('UPDATE users SET manual_activation = 1 WHERE id = ?').run(userId);
+  return getUserById(userId);
 }
 
 function createUser({ id, email, password, bananas = 1, eggs = 0, balance = 0, referral_code = null, referred_by = null }) {
@@ -212,9 +247,10 @@ function createCashout(userId, amount, method, details) {
   if (user.balance < amount) throw new Error('Insufficient balance');
 
   // Determine next milestone based on the highest previously approved cashout
-  const isSubscribed = user.subscription && ['basic', 'premium', 'vip'].includes(user.subscription.toLowerCase());
+  const isSubscribed = user.subscription && ['basic', 'premium', 'vip', 'hatchling', 'henhouse', 'goldenfarm'].includes(user.subscription.toLowerCase());
+  const everSubscribed = !!user.has_subscribed;
 
-  if (!isSubscribed) {
+  if (!isSubscribed && !everSubscribed) {
     const milestoneRow = db.prepare("SELECT MAX(amount) as max_amount FROM cashouts WHERE userId = ? AND status = 'approved'").get(userId);
     const maxApproved = milestoneRow ? (milestoneRow.max_amount || 0) : 0;
 
@@ -381,7 +417,7 @@ function feedChicken(userId) {
 
   // Check limits
   const isFree = !user.subscription || user.subscription === 'basic' || user.subscription === 'None';
-  if (isFree) { // 'basic' is the 50 peso one, wait, user said "FREE acount 1 egg daily". 
+  if (isFree) { // 'basic' is the 50 peso one, wait, user said "on FREE acount 1 egg daily". 
     // Let's assume 'None' is free. 'basic' usually implies paid. 
     // Checking previous code: "basic" is 50 pesos. "None" is default.
     // So Free = 'None' (or null).
@@ -406,9 +442,7 @@ function feedChicken(userId) {
   }
 
   const isTrulyFree = !user.subscription || user.subscription === 'None';
-  if (isTrulyFree && eggsToday >= 1) {
-    throw new Error('Daily egg limit reached for free account. Upgrade to earn more!');
-  }
+  // Egg limit for free accounts removed as requested
 
   // Update: -2 bananas, +1 egg (NO BALANCE INCREASE), update daily counters
   db.prepare(`
@@ -523,7 +557,7 @@ function updateSubscriptionRequestStatus(id, status, reason) {
 
     // Activate subscription + give welcome bananas.
     // Do NOT set last_daily_banana here — let users claim their daily bonus on day 1 themselves.
-    db.prepare('UPDATE users SET subscription = ?, subscription_purchased_at = ?, bananas = bananas + ? WHERE id = ?')
+    db.prepare('UPDATE users SET subscription = ?, subscription_purchased_at = ?, bananas = bananas + ?, has_subscribed = 1 WHERE id = ?')
       .run(req.plan, now, bonus, req.userId);
 
     logBanana(req.userId, bonus, `Subscription Welcome Bonus (${req.plan})`, 'reward');
@@ -554,16 +588,6 @@ function updateSubscriptionRequestStatus(id, status, reason) {
 
 function deleteSubscriptionRequest(id) {
   return db.prepare('DELETE FROM subscription_requests WHERE id = ?').run(id);
-}
-
-function toggleAdmin(userId, isAdmin) {
-  const now = new Date().toISOString();
-  if (isAdmin) {
-    db.prepare("UPDATE users SET is_admin = 1, role = 'admin', admin_granted_at = ? WHERE id = ?").run(now, userId);
-  } else {
-    db.prepare("UPDATE users SET is_admin = 0, role = 'user', admin_revoked_at = ? WHERE id = ?").run(now, userId);
-  }
-  return getUserById(userId);
 }
 
 function deleteUser(id) {
@@ -619,6 +643,8 @@ module.exports = {
   deleteKycRequest,
   deleteCashoutRequest,
   toggleAdmin,
+  getBannedUsers,
+  activateUser,
   deleteUser,
   getSettings,
   updateSettings,
