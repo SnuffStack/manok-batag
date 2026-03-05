@@ -31,3 +31,7 @@ server/uploads/
 server/debug.log
 server/dist/
 .env
+
+server/database.db
+server/database.db-shm
+server/database.db-wal
