@@ -636,14 +636,14 @@ body {
 }
 
 .sub-bg-henhouse {
-  background-image: url('/Hen House.png');
+  background-image: url('/Hen_House.png');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
 
 .sub-bg-goldenfarm {
-  background-image: url('/Golden Farm.png');
+  background-image: url('/Golden_Farm.png');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -657,7 +657,7 @@ body {
 .sub-bg-goldenfarm .card-title,
 .sub-bg-goldenfarm .card-subtitle {
   color: #fff;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
 /* Farm Section */

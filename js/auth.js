@@ -1,3 +1,5 @@
+import { initParticles } from './homepage.js'
+
 let currentUser = null
 
 export async function checkAuthState() {
@@ -49,12 +51,12 @@ export function showAuthPage(view = 'login') {
     </div>
   `
 
-  // Import initParticles if needed or use global
-  import('./homepage.js').then(m => {
-    if (typeof m.initParticles === 'function') m.initParticles()
-  }).catch(() => {
-    if (typeof window.initParticles === 'function') window.initParticles()
-  })
+  // Use statically imported initParticles
+  if (typeof initParticles === 'function') {
+    initParticles()
+  } else if (typeof window.initParticles === 'function') {
+    window.initParticles()
+  }
 
   if (view === 'login') {
     showLogin()
