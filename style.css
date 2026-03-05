@@ -627,6 +627,39 @@ body {
   margin-top: 4px;
 }
 
+/* Farm Background - Subscription Tier Backgrounds */
+.sub-bg-hatchling {
+  background-image: url('/Hatchling.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.sub-bg-henhouse {
+  background-image: url('/Hen House.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.sub-bg-goldenfarm {
+  background-image: url('/Golden Farm.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Make text readable over backgrounds */
+.sub-bg-hatchling .card-title,
+.sub-bg-hatchling .card-subtitle,
+.sub-bg-henhouse .card-title,
+.sub-bg-henhouse .card-subtitle,
+.sub-bg-goldenfarm .card-title,
+.sub-bg-goldenfarm .card-subtitle {
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+
 /* Farm Section */
 .farm-display {
   margin: 32px 0;
