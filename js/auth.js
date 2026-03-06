@@ -38,9 +38,7 @@ export function showAuthPage(view = 'login') {
   app.innerHTML = `
     <div class="auth-container">
       <div id="particles" class="particle-container"></div>
-      <div class="chicken-auth-wrapper">
-        <img src="/chicken.png" class="chicken-auth-img" alt="Chicken">
-      </div>
+
       <div class="auth-box">
         <div id="auth-content">
           <div id="auth-form"></div>
@@ -79,10 +77,7 @@ window.showSignup = function () {
 
   authForm.innerHTML = `
     <form id="signup-form" onsubmit="handleSignup(event)" class="auth-card-form">
-      <div class="auth-logo">
-        <h2>CHICKEN BANANA</h2>
-        <p class="auth-subtitle">The funniest way to earn!</p>
-      </div>
+
 
       <div class="form-group">
         <div class="input-icon">
@@ -128,10 +123,7 @@ window.showLogin = function () {
 
   authForm.innerHTML = `
     <form id="login-form" onsubmit="handleLogin(event)" class="auth-card-form">
-      <div class="auth-logo">
-        <h2>CHICKEN BANANA</h2>
-        <p class="auth-subtitle">The funniest way to earn!</p>
-      </div>
+
 
       <div class="form-group">
         <div class="input-icon">
@@ -605,9 +597,7 @@ function showKYCStatus(status) {
   app.innerHTML = `
     <div class="auth-container">
       <div class="auth-box">
-        <div class="chicken-auth-wrapper" style="margin-bottom: 20px;">
-          <img src="/chicken.png" class="chicken-auth-img" alt="Chicken" style="width: 80px; height: 80px;">
-        </div>
+
         <h1 style="color: var(--primary); margin-bottom: 20px;">${statusInfo.title}</h1>
         <div class="alert ${statusInfo.color}" style="margin-bottom: 30px; font-weight: 500; padding: 20px;">
           ${statusInfo.message}
