@@ -45,6 +45,17 @@ export async function showDashboard(data) {
   }
 
   userData = data
+
+  // Fetch settings for withdrawal status
+  let settings = { withdrawals_enabled: true }
+  try {
+    const sResp = await fetch('/api/settings')
+    if (sResp.ok) {
+      const sBody = await sResp.json()
+      settings = sBody.settings || settings
+    }
+  } catch (e) { console.error('Failed to fetch settings', e) }
+
   const app = document.getElementById('app')
 
   app.innerHTML = `
@@ -219,6 +230,19 @@ export async function showDashboard(data) {
             </div>
           </div>
         </div>
+
+        <div class="member-list-section card" style="padding: 16px;">
+          <div class="card-header clickable" onclick="toggleMemberList(this)" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between; margin-bottom: 0;">
+             <div>
+                <span class="card-title" style="font-size: 1.1rem; margin:0;">👥 Member List</span>
+                <p class="card-subtitle" style="margin: 4px 0 0; font-size: 12px; color: #888;">Track your referred friends</p>
+             </div>
+             <span class="toggle-icon" style="transition: transform 0.3s;">▼</span>
+          </div>
+          <div id="member-list-container" style="display:none; margin-top:16px; border-top: 1px solid #eee; padding-top: 16px;">
+            <div class="skeleton-loader"></div>
+          </div>
+        </div>
         
         <div class="cashout-section card">
           <div class="card-header">
@@ -231,8 +255,11 @@ export async function showDashboard(data) {
                 <span>₱</span>
                 <input type="number" id="cashout-amount" placeholder="0.00" min="1" step="0.01">
               </div>
-              <button class="btn-cashout" onclick="requestCashout()">Withdraw</button>
+              <button class="btn-cashout" ${settings.withdrawals_enabled === false ? 'disabled style="background:var(--gray); cursor:not-allowed;"' : ''} onclick="requestCashout()">
+                ${settings.withdrawals_enabled === false ? 'Disabled' : 'Withdraw'}
+              </button>
             </div>
+            ${settings.withdrawals_enabled === false ? '<p style="color:var(--red); font-size:11px; margin-top:5px; font-weight:600;">⚠️ Withdrawals are temporarily disabled by administrator.</p>' : ''}
             <p style="font-size:12px; color:var(--gray); margin-top:8px;">
               Will be sent to: <strong>${data.payment_method || 'Not Set'} (${data.payment_number || '---'})</strong>
               <a onclick="openProfileModal()" style="color:var(--primary); cursor:pointer;">Edit</a>
@@ -276,9 +303,101 @@ export async function showDashboard(data) {
 
   updateBananaDisplay()
   loadCashoutHistory()
+  loadDownlines()
   checkDailyBananas()
   checkSubscriptionRequests()
   startSubscriptionCountdown(data.subscription_purchased_at)
+}
+
+async function loadDownlines() {
+  const container = document.getElementById('member-list-container')
+  if (!container) return
+
+  try {
+    const resp = await fetch(`/api/referrals/downlines/${userData.id}`)
+    if (resp.ok) {
+      const { items } = await resp.json()
+      renderDownlines(items)
+    } else {
+      console.error('Member list load failed:', resp.status, resp.statusText)
+      container.innerHTML = `<p class="error-text">Failed to load member list (Server returned ${resp.status}).</p>`
+    }
+  } catch (err) {
+    console.error('Error fetching downlines:', err)
+    container.innerHTML = '<p class="error-text">Connection error. Please ensure the server is running and restarted.</p>'
+  }
+}
+
+function renderDownlines(members) {
+  const container = document.getElementById('member-list-container')
+  if (!container) return
+
+  if (!members || members.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; padding: 20px; color: var(--gray);">
+        <p>No members yet. Start inviting friends!</p>
+      </div>
+    `
+    return
+  }
+
+  let html = `
+    <div class="member-table-wrap">
+      <table class="member-table">
+        <thead>
+          <tr>
+            <th>Email/Phone Number</th>
+            <th>Package</th>
+            <th>Joined</th>
+          </tr>
+        </thead>
+        <tbody>
+  `
+
+  members.forEach(m => {
+    const joinedDate = new Date(m.created_at).toLocaleDateString()
+    const plan = planNames[(m.subscription || 'None').toLowerCase()] || 'FREE'
+    const planClass = (m.subscription && m.subscription !== 'None') ? 'plan-active' : 'plan-free'
+
+    html += `
+      <tr>
+        <td class="member-email">${m.email}</td>
+        <td><span class="member-plan ${planClass}">${plan}</span></td>
+        <td class="member-date">${joinedDate}</td>
+      </tr>
+    `
+  })
+
+  html += `
+        </tbody>
+      </table>
+    </div>
+  `
+
+  container.innerHTML = html
+}
+
+window.toggleMemberList = function (el) {
+  const container = document.getElementById('member-list-container');
+  const icon = el.querySelector('.toggle-icon');
+
+  const isExpanded = container.classList.contains('expanded');
+
+  if (isExpanded) {
+    // Collapse
+    container.classList.remove('expanded');
+    if (icon) icon.style.transform = 'rotate(0deg)';
+    setTimeout(() => {
+      container.style.display = 'none';
+    }, 400);
+  } else {
+    // Expand
+    container.style.display = 'block';
+    // Force reflow
+    container.offsetHeight;
+    container.classList.add('expanded');
+    if (icon) icon.style.transform = 'rotate(180deg)';
+  }
 }
 
 async function checkSubscriptionRequests() {
@@ -878,6 +997,16 @@ window.requestCashout = async function () {
   const amount = parseFloat(amountInput.value)
   const messageDiv = document.getElementById('cashout-message')
 
+  // Double check settings
+  try {
+    const sResp = await fetch('/api/settings')
+    const { settings } = await sResp.json()
+    if (settings.withdrawals_enabled === false) {
+      alert('Withdrawals are currently disabled by administrator.')
+      return
+    }
+  } catch (e) { }
+
   if (!amount || amount <= 0) {
     messageDiv.innerHTML = '<div class="alert alert-error">Please enter a valid amount</div>'
     return
@@ -957,10 +1086,8 @@ window.requestCashout = async function () {
 async function checkDailyBananas() {
   if (!userData.subscription || userData.subscription === 'None') return
 
-  // Check locally first to avoid unnecessary calls (optimization)
-  const lastDaily = userData.last_daily_banana ? new Date(userData.last_daily_banana) : null
-  const now = new Date()
-  if (lastDaily && lastDaily.getDate() === now.getDate() && lastDaily.getMonth() === now.getMonth() && lastDaily.getFullYear() === now.getFullYear()) {
+  const todayStr = new Date().toISOString().split('T')[0]
+  if (userData.last_daily_banana && userData.last_daily_banana.startsWith(todayStr)) {
     return // already claimed today
   }
 

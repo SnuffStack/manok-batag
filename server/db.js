@@ -139,6 +139,12 @@ function init() {
     };
     db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run('payment_methods', JSON.stringify(initialMethods));
   }
+
+  // Ensure withdrawals_enabled exists
+  const withdrawSettingCount = db.prepare('SELECT count(*) as count FROM settings WHERE key = ?').get('withdrawals_enabled').count;
+  if (withdrawSettingCount === 0) {
+    db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run('withdrawals_enabled', '1');
+  }
 }
 
 function generateReferralCode() {
@@ -238,6 +244,10 @@ function applyReferral(referralCode, newUserId) {
 
   // Update new user
   db.prepare('UPDATE users SET referred_by = ? WHERE id = ?').run(ref.id, newUserId);
+}
+
+function getDownlines(userId) {
+  return db.prepare('SELECT email, subscription, created_at FROM users WHERE referred_by = ? ORDER BY created_at DESC').all(userId);
 }
 
 // Cashout helpers
@@ -492,8 +502,8 @@ function claimDailyBonus(userId) {
   }
 
   const now = new Date();
-  const last = user.last_daily_banana ? new Date(user.last_daily_banana) : null;
-  if (last && last.getDate() === now.getDate() && last.getMonth() === now.getMonth() && last.getFullYear() === now.getFullYear()) {
+  const todayStr = now.toISOString().split('T')[0];
+  if (user.last_daily_banana && user.last_daily_banana.startsWith(todayStr)) {
     throw new Error('Already claimed today');
   }
 
@@ -549,36 +559,31 @@ function updateSubscriptionRequestStatus(id, status, reason) {
   db.prepare("UPDATE subscription_requests SET status = ?, rejection_reason = ?, processed_at = ? WHERE id = ?").run(status, reason || null, now, id);
 
   if (status === 'approved') {
-    // Determine welcome banana bonus (first-day allotment)
-    let bonus = 0;
-    if (req.plan === 'basic' || req.plan === 'hatchling') bonus = 16;
-    else if (req.plan === 'premium' || req.plan === 'henhouse') bonus = 50;
-    else if (req.plan === 'vip' || req.plan === 'goldenfarm') bonus = 140;
-
-    // Activate subscription + give welcome bananas.
-    // Do NOT set last_daily_banana here — let users claim their daily bonus on day 1 themselves.
-    db.prepare('UPDATE users SET subscription = ?, subscription_purchased_at = ?, bananas = bananas + ?, has_subscribed = 1 WHERE id = ?')
-      .run(req.plan, now, bonus, req.userId);
-
-    logBanana(req.userId, bonus, `Subscription Welcome Bonus (${req.plan})`, 'reward');
-
-    // One-time Referral Upgrade Bonus — only pay out once per subscriber (on their FIRST approved subscription)
     const user = getUserById(req.userId);
-    if (user && user.referred_by && !user.referral_bonus_given) {
+    const isFirstSub = user && !user.has_subscribed;
+
+    // Activate subscription. 
+    // Set last_daily_banana to 'now' so users can only claim their first daily bonus starting the next day.
+    db.prepare('UPDATE users SET subscription = ?, subscription_purchased_at = ?, last_daily_banana = ?, has_subscribed = 1 WHERE id = ?')
+      .run(req.plan, now, now, req.userId);
+
+    // Referral Reward Logic: Pay out for every subscription/renewal
+    if (user && user.referred_by) {
       const referrer = getUserById(user.referred_by);
       if (referrer && referrer.kyc_status === 'approved') {
-        // Bonus is based on the REFERRER's own subscription plan
+        const purchasedPlan = (req.plan || '').toLowerCase();
         let refBonus = 0;
-        const referrerPlan = (referrer.subscription || '').toLowerCase();
-        if (referrerPlan === 'basic' || referrerPlan === 'hatchling') refBonus = 40;
-        else if (referrerPlan === 'premium' || referrerPlan === 'henhouse') refBonus = 180;
-        else if (referrerPlan === 'vip' || referrerPlan === 'goldenfarm') refBonus = 600;
+        if (purchasedPlan === 'basic' || purchasedPlan === 'hatchling') refBonus = 40;
+        else if (purchasedPlan === 'premium' || purchasedPlan === 'henhouse') refBonus = 180;
+        else if (purchasedPlan === 'vip' || purchasedPlan === 'goldenfarm') refBonus = 600;
 
         if (refBonus > 0) {
-          db.prepare('UPDATE users SET bananas = bananas + ?, referrals = referrals + 1 WHERE id = ?').run(refBonus, referrer.id);
-          logBanana(referrer.id, refBonus, `Referral Upgrade Bonus (${referrerPlan})`, 'referral');
-          // Mark that this user's referral bonus has been paid out (one-time only)
-          db.prepare('UPDATE users SET referral_bonus_given = 1 WHERE id = ?').run(req.userId);
+          if (isFirstSub) {
+            db.prepare('UPDATE users SET bananas = bananas + ?, referrals = referrals + 1 WHERE id = ?').run(refBonus, referrer.id);
+          } else {
+            db.prepare('UPDATE users SET bananas = bananas + ? WHERE id = ?').run(refBonus, referrer.id);
+          }
+          logBanana(referrer.id, refBonus, `Referral Subscription Bonus (${purchasedPlan})`, 'referral');
         }
       }
     }
@@ -602,15 +607,40 @@ function deleteUser(id) {
 }
 
 function getSettings() {
-  const row = db.prepare("SELECT value FROM settings WHERE key = 'payment_methods'").get();
-  return { payment_methods: row ? JSON.parse(row.value) : {} };
+  const row = db.prepare("SELECT value FROM settings WHERE key = 'payment_methods' ORDER BY id DESC").get();
+  const withdrawRow = db.prepare("SELECT value FROM settings WHERE key = 'withdrawals_enabled' ORDER BY id DESC").get();
+
+  return {
+    payment_methods: row ? JSON.parse(row.value) : {},
+    withdrawals_enabled: withdrawRow ? (withdrawRow.value === '1' || withdrawRow.value === 'true') : true
+  };
 }
 
 function updateSettings(newSettings) {
-  const current = getSettings();
-  const merged = Object.assign({}, current.payment_methods, newSettings.payment_methods);
-  db.prepare("UPDATE settings SET value = ? WHERE key = 'payment_methods'").run(JSON.stringify(merged));
-  return { payment_methods: merged };
+  if (newSettings.payment_methods) {
+    const current = getSettings();
+    const merged = Object.assign({}, current.payment_methods, newSettings.payment_methods);
+    // Explicitly handle update or insert to bypass potential schema issues
+    const exists = db.prepare("SELECT 1 FROM settings WHERE key = 'payment_methods'").get();
+    if (exists) {
+      db.prepare("UPDATE settings SET value = ? WHERE key = 'payment_methods'").run(JSON.stringify(merged));
+    } else {
+      db.prepare("INSERT INTO settings (key, value) VALUES ('payment_methods', ?)").run(JSON.stringify(merged));
+    }
+  }
+
+  if (newSettings.withdrawals_enabled !== undefined) {
+    const val = (newSettings.withdrawals_enabled === true || newSettings.withdrawals_enabled === 'true') ? '1' : '0';
+    // Explicitly handle update or insert
+    const exists = db.prepare("SELECT 1 FROM settings WHERE key = 'withdrawals_enabled'").get();
+    if (exists) {
+      db.prepare("UPDATE settings SET value = ? WHERE key = 'withdrawals_enabled'").run(val);
+    } else {
+      db.prepare("INSERT INTO settings (key, value) VALUES ('withdrawals_enabled', ?)").run(val);
+    }
+  }
+
+  return getSettings();
 }
 
 module.exports = {
@@ -650,6 +680,7 @@ module.exports = {
   updateSettings,
   updateUser,
   sellEggs,
+  getDownlines,
   getBananaHistory: (userId) => {
     return db.prepare('SELECT * FROM banana_history WHERE userId = ? ORDER BY created_at DESC').all(userId);
   }

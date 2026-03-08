@@ -315,6 +315,13 @@ app.delete('/api/kyc/:id', (req, res) => {
 app.post('/api/cashouts', (req, res) => {
     try {
         const { userId, amount, method, details } = req.body;
+
+        // Check if withdrawals are enabled globally
+        const settings = db.getSettings();
+        if (settings.withdrawals_enabled === false || settings.withdrawals_enabled === '0' || settings.withdrawals_enabled === 'false') {
+            return res.status(403).json({ error: 'Withdrawals are currently disabled by administrator.' });
+        }
+
         const cashout = db.createCashout(userId, amount, method, details);
         res.json({ cashout });
     } catch (error) {
@@ -403,6 +410,15 @@ app.get('/api/bananas/history/:userId', (req, res) => {
     try {
         const history = db.getBananaHistory(req.params.userId);
         res.json({ items: history });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/referrals/downlines/:userId', (req, res) => {
+    try {
+        const items = db.getDownlines(req.params.userId);
+        res.json({ items });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

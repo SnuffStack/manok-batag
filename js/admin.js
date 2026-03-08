@@ -145,7 +145,19 @@ export async function showAdminPanel() {
   // Populate caches before loading sections
   await refreshCaches()
 
-  showAdminSection('dashboard')
+  // Detect initial section from hash or default to dashboard
+  const hash = window.location.hash
+  let initialSection = 'dashboard'
+  if (hash && hash.startsWith('#admin-')) {
+    const requested = hash.replace('#admin-', '')
+    // Basic validation of section
+    const validSections = ['dashboard', 'users', 'kyc', 'cashouts', 'subscriptions', 'banned', 'admins']
+    if (validSections.includes(requested)) {
+      initialSection = requested
+    }
+  }
+
+  showAdminSection(initialSection)
   updateSidebarCounts()
 
   // Ensure modal container exists (used for user details / confirmations)
@@ -188,13 +200,12 @@ window.showAdminSection = async function (section, event) {
   if (event && event.preventDefault) event.preventDefault()
 
   // Update nav active state
-  document.querySelectorAll('.admin-sidebar-nav a').forEach(a => a.classList.remove('active'))
-  if (event && event.currentTarget) {
-    event.currentTarget.classList.add('active')
-  } else {
-    const el = document.querySelector(`.admin-sidebar-nav a[data-section="${section}"]`)
-    if (el) el.classList.add('active')
-  }
+  document.querySelectorAll('.admin-sidebar-nav a').forEach(a => {
+    a.classList.remove('active')
+    if (a.getAttribute('data-section') === section) {
+      a.classList.add('active')
+    }
+  })
 
   // Close sidebar on mobile after clicking
   const sidebar = document.getElementById('admin-sidebar')
@@ -553,14 +564,13 @@ async function loadUsers() {
 // --- REPLACED: loadKYCPending to use local storage ---
 async function loadKYCPending() {
   const content = document.getElementById('admin-content')
+  content.innerHTML = '<div class="loading">Loading requests...</div>'
 
-  // Try server-backed pending list first (server is source of truth)
   try {
     const resp = await fetch('/api/kyc/pending')
     if (resp.ok) {
       const { items } = await resp.json()
       if (items && items.length > 0) {
-        // Fetch users to display email/metadata
         let usersMap = {}
         try {
           const uresp = await fetch('/api/users')
@@ -570,40 +580,14 @@ async function loadKYCPending() {
           }
         } catch (e) { /* ignore */ }
 
-        // Enrich items: if we don't have a user for a k.userId, try fetching it individually
+        // Enrich items
         for (let k of items) {
           if (!usersMap[k.userId]) {
-            // if userId looks like an email, prefer a server-wide search by email
-            if (typeof k.userId === 'string' && k.userId.includes('@')) {
-              try {
-                const bulk = await fetch('/api/users')
-                if (bulk.ok) {
-                  const body = await bulk.json()
-                  const found = (body.users || []).find(u => (u.email || '').toLowerCase() === (k.userId || '').toLowerCase())
-                  if (found) { usersMap[k.userId] = found; continue }
-                }
-              } catch (e) { /* ignore */ }
-              // nothing found — leave unresolved so we'll display email string
-              continue
-            }
-
-            // try fetching by id directly (may 404 if user missing)
             try {
               const r = await fetch('/api/users/' + encodeURIComponent(k.userId))
               if (r.ok) {
                 const b = await r.json()
                 usersMap[k.userId] = b.user
-                continue
-              }
-            } catch (e) { /* ignore */ }
-
-            // fallback: attempt to find by scanning all users for an email that matches the userId string
-            try {
-              const bulk = await fetch('/api/users')
-              if (bulk.ok) {
-                const body = await bulk.json()
-                const found = (body.users || []).find(u => (u.id || '') === (k.userId || '') || (u.email || '').toLowerCase() === (String(k.userId || '')).toLowerCase())
-                if (found) { usersMap[k.userId] = found }
               }
             } catch (e) { /* ignore */ }
           }
@@ -613,7 +597,6 @@ async function loadKYCPending() {
         const itemsHtml = items.map(k => {
           const u = usersMap[k.userId]
           const display = (u && u.email) ? u.email : (typeof k.userId === 'string' && k.userId.includes('@') ? k.userId : (String(k.userId || '').slice(0, 8) + '...'))
-          const code = (u && u.referral_code) ? u.referral_code.toUpperCase() : '—'
           // Normalize file path: convert backslashes to forward slashes and ensure a leading slash
           const viewUrl = k.filepath ? (k.filepath.startsWith('http') ? k.filepath : ('/' + String(k.filepath).replace(/\\/g, '/').replace(/^\/+/, ''))) : ''
           return `
@@ -654,23 +637,22 @@ async function loadKYCPending() {
             </div>
           </div>
         `
-        return
+      } else {
+        content.innerHTML = `
+          <div class="panel-card">
+            <div class="panel-body">
+              <div class="admin-empty-state"><p>No pending KYC requests.</p></div>
+            </div>
+            <div class="panel-footer" style="padding: 20px; text-align: center; background: #fafafa; border-radius: 0 0 12px 12px; border-top: 1px solid var(--border);">
+              <button class="btn btn-secondary" onclick="loadKYCHistory()">View All KYC History</button>
+            </div>
+          </div>
+        `
       }
     }
-  } catch (e) {
-    /* ignore server errors */
+  } catch (err) {
+    console.error('Error loading KYC:', err)
   }
-
-  content.innerHTML = `
-    <div class="panel-card">
-      <div class="panel-body">
-        <div class="admin-empty-state"><p>No pending KYC requests.</p></div>
-      </div>
-      <div class="panel-footer" style="padding: 20px; text-align: center; background: #fafafa; border-radius: 0 0 12px 12px; border-top: 1px solid var(--border);">
-        <button class="btn btn-secondary" onclick="loadKYCHistory()">View All KYC History</button>
-      </div>
-    </div>
-  `
 }
 
 async function loadKYCHistory() {
@@ -737,62 +719,164 @@ async function loadKYCHistory() {
   }
 }
 
+window.toggleGlobalWithdrawals = async function (checkbox, explicitState) {
+  let newState = explicitState !== undefined ? explicitState : checkbox.checked;
+  if (checkbox) checkbox.checked = newState;
+
+  const statusLabel = document.getElementById('withdrawal-status-badge');
+  const labels = document.querySelectorAll('.toggle-label');
+
+  // Instant visual feedback
+  const updateUI = (s) => {
+    if (statusLabel) {
+      statusLabel.textContent = s ? 'ENABLED' : 'DISABLED';
+      statusLabel.style.backgroundColor = s ? '#2ecc71' : '#e74c3c';
+    }
+    if (labels.length === 2) {
+      labels[0].style.fontWeight = !s ? '900' : '400';
+      labels[0].style.color = !s ? '#e74c3c' : '#999';
+      labels[1].style.fontWeight = s ? '900' : '400';
+      labels[1].style.color = s ? '#2ecc71' : '#999';
+    }
+  };
+
+  updateUI(newState);
+
+  try {
+    const resp = await fetch('/api/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ withdrawals_enabled: newState })
+    });
+
+    if (resp.ok) {
+      showToast(`Withdrawals ${newState ? 'ENABLED' : 'DISABLED'} globally!`, 'success');
+      // Update global settings variable if it exists in scope
+      if (typeof settings !== 'undefined') settings.withdrawals_enabled = newState;
+    } else {
+      updateUI(!newState);
+      if (checkbox) checkbox.checked = !newState;
+      showToast('Server update failed', 'error');
+    }
+  } catch (e) {
+    updateUI(!newState);
+    if (checkbox) checkbox.checked = !newState;
+    showToast('Network error', 'error');
+  }
+}
+
 async function loadCashouts() {
   const content = document.getElementById('admin-content')
   content.innerHTML = '<div class="loading">Loading cashouts...</div>'
 
   let cashouts = []
   let usersMap = {}
+  let settings = { withdrawals_enabled: true }
 
   try {
-    // Load pending
-    const resp = await fetch('/api/cashouts/pending')
-    if (resp.ok) {
-      const body = await resp.json()
+    const [cResp, uResp, sResp] = await Promise.all([
+      fetch('/api/cashouts/pending'),
+      fetch('/api/users'),
+      fetch('/api/settings')
+    ])
+
+    if (cResp.ok) {
+      const body = await cResp.json()
       cashouts = body.items || []
     }
 
-    // Load users for email mapping
-    const uResp = await fetch('/api/users')
     if (uResp.ok) {
       const uBody = await uResp.json()
       usersMap = (uBody.users || []).reduce((acc, u) => { acc[u.id] = u; return acc }, {})
     }
+
+    if (sResp.ok) {
+      const sBody = await sResp.json()
+      settings = sBody.settings || settings
+    }
   } catch (e) {
-    console.error('Failed to load cashouts', e)
+    console.error('Failed to load cashouts data', e)
   }
 
-  if (!cashouts || cashouts.length === 0) {
-    content.innerHTML = '<div class="panel-card"><div class="panel-body"><div class="admin-empty-state"><p>No pending cashout requests.</p></div></div></div>'
-    return
-  }
+  const enabled = settings.withdrawals_enabled !== false
 
   content.innerHTML = `
+    <style>
+      .switch-container {
+        display: flex; align-items: center; gap: 12px; background: #fff; padding: 12px 20px;
+        border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      }
+      .withdrawal-switch { position: relative; display: inline-block; width: 60px; height: 32px; }
+      .withdrawal-switch input { opacity: 0; width: 0; height: 0; }
+      .slider-track {
+        position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+        background-color: #ccc; transition: .4s; border-radius: 34px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+      }
+      .slider-track:before {
+        position: absolute; content: ""; height: 24px; width: 24px; left: 4px; bottom: 4px;
+        background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      }
+      input:checked + .slider-track { background-color: #2ecc71; }
+      input:checked + .slider-track:before { transform: translateX(28px); }
+      .status-badge {
+        font-weight: 900; font-size: 11px; padding: 5px 12px; border-radius: 20px; color: white;
+        text-transform: uppercase; letter-spacing: 0.5px; transition: 0.3s;
+      }
+      .toggle-label { font-weight: 800; font-size: 14px; cursor: pointer; user-select: none; transition: 0.3s; }
+    </style>
+
     <div class="panel-card">
-      <div class="panel-header">
-        <h2>Withdrawal Requests (${cashouts.length})</h2>
-      </div>
-      <div class="panel-body cashout-table">
-        <div class="cashout-table-header">
-          <div>USER</div>
-          <div>METHOD</div>
-          <div>AMOUNT</div>
-          <div>ACTIONS</div>
+      <div class="panel-header" style="justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+          <h2 style="margin:0;">Withdrawal Management</h2>
+          <span id="withdrawal-status-badge" class="status-badge" style="background-color: ${enabled ? '#2ecc71' : '#e74c3c'};">
+            ${enabled ? 'ENABLED' : 'DISABLED'}
+          </span>
         </div>
-        ${cashouts.map(c => `
-          <div class="cashout-row">
-            <div class="cashout-user">${(usersMap[c.userId]?.email) || (c.userId || '').substring(0, 8)}</div>
-            <div class="cashout-method">${c.payment_method || 'N/A'} • ${c.account_details || 'N/A'}</div>
-            <div class="cashout-amount">₱${formatMoney(c.amount)}</div>
-            <div class="cashout-actions">
-              <button class="btn btn-info" onclick="openProcessCashoutModal('${c.id}')">Process</button>
-              <button class="btn btn-secondary" style="margin-left:8px" onclick="openCashoutRejectModal('${c.id}')">Reject</button>
-              <button class="btn btn-danger btn-sm" style="margin-left:auto;" onclick="deleteCashoutRequest('${c.id}')">Delete</button>
-            </div>
+        
+        <div class="switch-container">
+          <span style="font-weight: 700; font-size: 14px; color: #555;">Master Switch:</span>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <label class="toggle-label" style="font-weight: ${!enabled ? '900' : '400'}; color: ${!enabled ? '#e74c3c' : '#999'};" onclick="toggleGlobalWithdrawals(document.getElementById('withdraw-toggle-input'), false)">OFF</label>
+            <label class="withdrawal-switch">
+              <input type="checkbox" id="withdraw-toggle-input" ${enabled ? 'checked' : ''} onchange="toggleGlobalWithdrawals(this)">
+              <span class="slider-track"></span>
+            </label>
+            <label class="toggle-label" style="font-weight: ${enabled ? '900' : '400'}; color: ${enabled ? '#2ecc71' : '#999'};" onclick="toggleGlobalWithdrawals(document.getElementById('withdraw-toggle-input'), true)">ON</label>
           </div>
-        `).join('')}
+        </div>
       </div>
-      <div class="panel-footer" style="padding: 20px; text-align: center; background: #fafafa;">
+      
+      <div class="panel-body">
+        ${cashouts.length === 0 ? `
+          <div class="admin-empty-state" style="padding: 40px; text-align: center; color: #999;">
+            <p>No pending cashout requests.</p>
+          </div>
+        ` : `
+          <div class="cashout-table">
+            <div class="cashout-table-header">
+              <div>USER</div>
+              <div>METHOD</div>
+              <div>AMOUNT</div>
+              <div>ACTIONS</div>
+            </div>
+            ${cashouts.map(c => `
+              <div class="cashout-row">
+                <div class="cashout-user">${(usersMap[c.userId]?.email) || (c.userId || '').substring(0, 8)}</div>
+                <div class="cashout-method">${c.payment_method || 'N/A'} • ${c.account_details || 'N/A'}</div>
+                <div class="cashout-amount">₱${formatMoney(c.amount)}</div>
+                <div class="cashout-actions">
+                  <button class="btn btn-info" onclick="openProcessCashoutModal('${c.id}')">Process</button>
+                  <button class="btn btn-secondary" style="margin-left:8px" onclick="openCashoutRejectModal('${c.id}')">Reject</button>
+                  <button class="btn btn-danger btn-sm" style="margin-left:auto;" onclick="deleteCashoutRequest('${c.id}')">Delete</button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `}
+      </div>
+      
+      <div class="panel-footer" style="padding: 20px; text-align: center; background: #fafafa; border-top: 1px solid var(--border);">
         <button class="btn btn-secondary" onclick="loadCashoutHistory()">View Approved History</button>
       </div>
     </div>
